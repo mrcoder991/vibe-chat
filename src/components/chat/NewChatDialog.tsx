@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
-import { getUserById, sendChatInvite, createChat } from '@/lib/firebaseUtils';
+import { getUserById, sendChatInvite, createChat, searchUsers } from '@/lib/firebaseUtils';
 import { XIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Avatar from '@/components/ui/Avatar';
@@ -107,29 +107,11 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
     setSearchError('');
     
     try {
-      // Since we don't have the searchUsers function, we'll implement a basic version
-      // that simulates searching by adding a dummy result
-      const query = searchQuery.trim().toLowerCase();
+      // Use the real searchUsers function from firebaseUtils
+      const results = await searchUsers(searchQuery.trim(), user.id);
+      setSearchResults(results);
       
-      // Simulate an API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For now, we'll use a mock result based on the search query
-      const mockResults: User[] = [];
-      
-      // Add a mock result if the query is not empty
-      if (query.length > 0) {
-        mockResults.push({
-          id: `user-${Date.now()}`,
-          name: `User matching "${query}"`,
-          email: `${query}@example.com`,
-          image: null,
-          status: 'online'
-        });
-      }
-      
-      setSearchResults(mockResults);
-      if (mockResults.length === 0) {
+      if (results.length === 0) {
         setSearchError('No users found matching your search');
       }
     } catch (error) {
@@ -159,9 +141,16 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
       if (foundUser && foundUser.id === inviteUserId) {
         targetUser = foundUser;
       } else {
-        targetUser = await getUserById(inviteUserId);
-        if (!targetUser) {
-          throw new Error('User not found');
+        // Find the user in search results first
+        const searchResult = searchResults.find(result => result.id === inviteUserId);
+        if (searchResult) {
+          targetUser = searchResult;
+        } else {
+          // If not found in search results, fetch from Firebase
+          targetUser = await getUserById(inviteUserId);
+          if (!targetUser) {
+            throw new Error('User not found');
+          }
         }
       }
       

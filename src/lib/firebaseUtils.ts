@@ -62,6 +62,58 @@ export const searchUsersByEmail = async (email: string): Promise<User[]> => {
   }
 };
 
+/**
+ * Search for users by name or email
+ * @param searchTerm - The term to search for (name or email)
+ * @param currentUserId - The ID of the current user (to exclude from results)
+ * @returns Promise<User[]> - A list of matching users
+ */
+export const searchUsers = async (searchTerm: string, currentUserId: string): Promise<User[]> => {
+  try {
+    console.log(`Searching for users with term: ${searchTerm}`);
+    
+    // Convert search term to lowercase for case-insensitive search
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    // Get all users from the database
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+    
+    // Convert the snapshot to an array of users
+    const users: User[] = [];
+    
+    snapshot.forEach(doc => {
+      const userData = doc.data();
+      const user: User = {
+        id: doc.id,
+        name: userData.name || 'Unknown',
+        email: userData.email || '',
+        image: userData.image || null,
+        status: userData.status || 'offline'
+      };
+      
+      // Add the user to the array if it's not the current user
+      if (user.id !== currentUserId) {
+        users.push(user);
+      }
+    });
+    
+    // Filter users by search term (name or email containing the search term)
+    const filteredUsers = users.filter(user => {
+      const nameMatch = user.name.toLowerCase().includes(lowerSearchTerm);
+      const emailMatch = user.email.toLowerCase().includes(lowerSearchTerm);
+      return nameMatch || emailMatch;
+    });
+    
+    console.log(`Found ${filteredUsers.length} users matching "${searchTerm}"`);
+    
+    return filteredUsers;
+  } catch (error) {
+    console.error('Error searching for users:', error);
+    return [];
+  }
+};
+
 // Chat Invitation Functions
 export const sendChatInvite = async (
   senderId: string, 
