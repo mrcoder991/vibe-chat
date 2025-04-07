@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -119,7 +120,7 @@ export default function TestImageKit() {
         {previewUrl && (
           <div className="mb-6">
             <h2 className="text-lg font-medium mb-2">Preview:</h2>
-            <img src={previewUrl} alt="Preview" className="max-h-60 max-w-full object-contain border rounded" />
+            <Image src={previewUrl} alt="Preview" className="max-h-60 max-w-full object-contain border rounded" />
           </div>
         )}
         
@@ -141,7 +142,7 @@ export default function TestImageKit() {
           <div className="border-t pt-6">
             <h2 className="text-lg font-medium mb-2">Uploaded Image:</h2>
             <div className="mb-4">
-              <img src={uploadedImage.url} alt="Uploaded" className="max-h-60 max-w-full object-contain border rounded" />
+              <Image src={uploadedImage.url} alt="Uploaded" className="max-h-60 max-w-full object-contain border rounded" />
             </div>
             
             <div className="mb-2">

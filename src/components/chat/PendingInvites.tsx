@@ -16,7 +16,7 @@ interface PendingInvitesProps {
 
 export default function PendingInvites({ onClose }: PendingInvitesProps) {
   const { user } = useAuth();
-  const { pendingInvites, removeInvite, addChat, setSelectedChatId, fetchInvites } = useAppStore();
+  const { pendingInvites, addChat, setSelectedChatId } = useAppStore();
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
   
   // If no invites, show a message
@@ -37,7 +37,7 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircleIcon className="h-8 w-8 text-blue-500" />
             </div>
-            <p className="text-gray-500 mb-6">You don't have any pending chat invitations.</p>
+            <p className="text-gray-500 mb-6">You don&apos;t have any pending chat invitations.</p>
             
             <Button onClick={onClose} variant="secondary">
               Close

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 
@@ -89,7 +88,7 @@ export default function Home() {
                     </div>
                     <div className="flex justify-end">
                       <div className="bg-blue-600 rounded-lg p-3 max-w-xs text-white">
-                        <p className="text-sm">Hi Alex! I'm doing great, thanks for asking.</p>
+                        <p className="text-sm">Hi Alex! I&apos;m doing great, thanks for asking.</p>
                       </div>
                     </div>
                     <div className="flex justify-start">

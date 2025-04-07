@@ -9,6 +9,7 @@ import { sendTextMessage, sendImageMessage, deleteMessage } from '@/lib/firebase
 import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
+import Image from 'next/image';
 
 export default function ChatArea() {
   const { user } = useAuth();
@@ -17,7 +18,6 @@ export default function ChatArea() {
     chats, 
     currentChatMessages, 
     replyingTo, 
-    fetchMessages, 
     subscribeToSelectedChatMessages,
     setReplyingTo, 
     addMessage, 
@@ -59,10 +59,10 @@ export default function ChatArea() {
     
     setIsSubmitting(true);
     try {
-      let replyToInfo = undefined;
+      let replyToInfo: { id: string; content: string; senderId: string } | undefined = undefined;
       if (replyingTo) {
         replyToInfo = {
-          id: replyingTo.id,
+          id: replyingTo.id,  
           content: replyingTo.content,
           senderId: replyingTo.senderId,
         };
@@ -117,7 +117,7 @@ export default function ChatArea() {
     
     setIsSubmitting(true);
     try {
-      let replyToInfo = undefined;
+      let replyToInfo: { id: string; content: string; senderId: string } | undefined = undefined;
       if (replyingTo) {
         replyToInfo = {
           id: replyingTo.id,
@@ -126,7 +126,7 @@ export default function ChatArea() {
         };
       }
       
-      const messageId = await sendImageMessage(
+      await sendImageMessage(
         selectedChatId,
         user.id,
         file,
@@ -150,7 +150,7 @@ export default function ChatArea() {
     if (!confirm('Are you sure you want to delete this message?')) return;
     
     try {
-      await deleteMessage(message.id, message.chatId);
+      await deleteMessage(message.id);
       
       // Update message in UI
       updateMessage(message.id, { deleted: true, content: message.type === 'text' ? 'This message was deleted' : '' });
@@ -277,7 +277,7 @@ export default function ChatArea() {
                           <span className="italic opacity-70">This image was deleted</span>
                         ) : (
                           <div className="relative">
-                            <img 
+                            <Image 
                               src={message.content} 
                               alt="Message image" 
                               className="rounded max-w-full max-h-60 object-contain" 

@@ -91,7 +91,7 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
     
     try {
       // Send chat invite
-      const inviteId = await sendChatInvite(
+      await sendChatInvite(
         user.id,
         user.name,
         foundUser.id

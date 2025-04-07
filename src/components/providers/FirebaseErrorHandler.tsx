@@ -94,7 +94,7 @@ export default function FirebaseErrorHandler() {
           <div>
             <p className="font-bold text-amber-600">Firestore Permissions Issue</p>
             <p className="text-sm mt-1">
-              There's a permissions issue with marking messages as read. To fix this, update your Firestore rules:
+              There&apos;s a permissions issue with marking messages as read. To fix this, update your Firestore rules:
             </p>
             <pre className="bg-gray-100 p-2 text-xs mt-2 rounded overflow-x-auto">
 {`match /messages/{messageId} {

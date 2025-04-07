@@ -7,7 +7,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatTimestamp, truncateText } from '@/lib/utils';
-import { PlusIcon, BellIcon, LogOutIcon, UserIcon, TrashIcon } from 'lucide-react';
+import { PlusIcon, BellIcon, LogOutIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deleteChat } from '@/lib/firebaseUtils';
 

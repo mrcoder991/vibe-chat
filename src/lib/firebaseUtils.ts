@@ -1,10 +1,9 @@
-import { db, storage } from './firebase';
+import { db } from './firebase';
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
   addDoc,
   serverTimestamp,
@@ -15,7 +14,6 @@ import {
   Timestamp,
   onSnapshot,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { User, Chat, Message, ChatInvite } from '@/types';
 
@@ -461,7 +459,7 @@ export const subscribeToInvites = (
   }
 };
 
-export const deleteMessage = async (messageId: string, chatId: string): Promise<boolean> => {
+export const deleteMessage = async (messageId: string): Promise<boolean> => {
   try {
     const messageRef = doc(db, 'messages', messageId);
     const messageDoc = await getDoc(messageRef);

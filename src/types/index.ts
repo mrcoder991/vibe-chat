@@ -4,7 +4,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  image?: string;
+  image?: string | null;
   status?: "online" | "offline";
   lastActive?: Timestamp;
 }
@@ -24,7 +24,7 @@ export interface Chat {
   participantInfo: {
     [key: string]: {
       name: string;
-      image?: string;
+      image?: string | null;
     };
   };
   lastMessage?: {

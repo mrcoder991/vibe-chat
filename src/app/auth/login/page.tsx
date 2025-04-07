@@ -25,7 +25,6 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<LoginInputs>({
     defaultValues: {
       rememberMe: true // Default to remember the user

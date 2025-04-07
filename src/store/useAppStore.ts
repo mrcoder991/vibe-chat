@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { User, Chat, ChatInvite, Message } from '@/types';
+import { Chat, ChatInvite, Message } from '@/types';
 import { 
   getUserChats, 
   getChatMessages,
@@ -78,7 +78,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     // Only unsubscribe if we're changing chats
     if (currentSelectedChatId !== chatId && get().messageUnsubscribe) {
-      get().messageUnsubscribe();
+      // Add optional chaining to safely call the function
+      get().messageUnsubscribe?.();
     }
     
     set({ selectedChatId: chatId });
@@ -129,7 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   subscribeToSelectedChatMessages: (chatId, userId) => {
     // Clear any previous subscription
     if (get().messageUnsubscribe) {
-      get().messageUnsubscribe();
+      get().messageUnsubscribe?.();
     }
     
     set({ isLoadingMessages: true });
@@ -165,7 +166,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   subscribeToUserChats: (userId) => {
     // Clear any previous subscription
     if (get().chatsUnsubscribe) {
-      get().chatsUnsubscribe();
+      get().chatsUnsubscribe?.();
     }
     
     set({ isLoadingChats: true });
@@ -196,7 +197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   subscribeToUserInvites: (userId) => {
     // Clear any previous subscription
     if (get().invitesUnsubscribe) {
-      get().invitesUnsubscribe();
+      get().invitesUnsubscribe?.();
     }
     
     set({ isLoadingInvites: true });
