@@ -6,7 +6,7 @@ import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatMessageTime, truncateText } from '@/lib/utils';
 import { sendTextMessage, sendImageMessage, deleteMessage } from '@/lib/firebaseUtils';
-import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon } from 'lucide-react';
+import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
 import Image from 'next/image';
@@ -192,6 +192,13 @@ export default function ChatArea() {
     <div className="flex flex-col h-full">
       {/* Chat header */}
       <div className="p-3 border-b border-gray-200 bg-white flex items-center">
+        <button 
+          onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          className="md:hidden mr-2 p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <Avatar 
           src={otherParticipantInfo.image}
           name={otherParticipantInfo.name}
@@ -204,7 +211,7 @@ export default function ChatArea() {
       </div>
       
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 md:p-4 p-2 bg-gray-50">
         {currentChatMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-600">
             <p>No messages yet. Start the conversation!</p>
@@ -225,8 +232,8 @@ export default function ChatArea() {
                   key={message.id} 
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`flex ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} max-w-[80%]`}>
-                    <div className={`flex-shrink-0 ${isOwnMessage ? 'ml-2' : 'mr-2'}`}>
+                  <div className={`flex ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} max-w-[90%] md:max-w-[80%] group`}>
+                    <div className={`flex-shrink-0 ${isOwnMessage ? 'ml-2' : 'mr-2'} self-end hidden sm:block`}>
                       <Avatar 
                         src={senderInfo.image}
                         name={senderInfo.name}
@@ -283,6 +290,8 @@ export default function ChatArea() {
                               className="rounded max-w-full max-h-60 object-contain" 
                               onClick={() => window.open(message.content, '_blank')}
                               style={{ cursor: 'pointer' }}
+                              width={300}
+                              height={200}
                             />
                           </div>
                         )
@@ -303,25 +312,29 @@ export default function ChatArea() {
                     {!message.deleted && (
                       <div 
                         className={`
-                          flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity mb-2
+                          flex items-end opacity-0 group-hover:opacity-100 transition-opacity mb-2 sm:mb-0
                           ${isOwnMessage ? 'mr-2' : 'ml-2'}
                         `}
                       >
-                        <button 
-                          onClick={() => setReplyingTo(message)}
-                          className="p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100"
-                        >
-                          <ReplyIcon className="h-4 w-4" />
-                        </button>
-                        
-                        {isOwnMessage && (
+                        <div className="bg-white rounded-full shadow p-1 flex flex-row sm:flex-col">
                           <button 
-                            onClick={() => handleDeleteMessage(message)}
-                            className="p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 mt-1"
+                            onClick={() => setReplyingTo(message)}
+                            className="p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100"
+                            aria-label="Reply to message"
                           >
-                            <TrashIcon className="h-4 w-4" />
+                            <ReplyIcon className="h-4 w-4" />
                           </button>
-                        )}
+                          
+                          {isOwnMessage && (
+                            <button 
+                              onClick={() => handleDeleteMessage(message)}
+                              className="p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 mt-0 sm:mt-1"
+                              aria-label="Delete message"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -337,7 +350,7 @@ export default function ChatArea() {
       {replyingTo && (
         <div className="bg-gray-100 p-2 border-t border-gray-200 flex items-center">
           <div className="flex-1 flex items-center">
-            <ReplyIcon className="h-4 w-4 text-gray-600 mr-2" />
+            <ReplyIcon className="h-4 w-4 text-gray-600 mr-2 flex-shrink-0" />
             <div className="text-sm text-gray-700 truncate">
               <span className="font-medium">
                 Replying to {replyingTo.senderId === user.id ? 'yourself' : selectedChat.participantInfo[replyingTo.senderId]?.name || 'Unknown User'}:
@@ -349,7 +362,7 @@ export default function ChatArea() {
           </div>
           <button 
             onClick={() => setReplyingTo(null)}
-            className="p-1 text-gray-600 hover:text-gray-800 rounded-full hover:bg-gray-200"
+            className="p-1 text-gray-600 hover:text-gray-800 rounded-full hover:bg-gray-200 flex-shrink-0"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -360,7 +373,8 @@ export default function ChatArea() {
       <div className="p-3 border-t border-gray-200 bg-white flex items-end">
         <button
           onClick={triggerFileInput}
-          className="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 mr-2"
+          className="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 mr-2 flex-shrink-0"
+          aria-label="Send image"
         >
           <ImageIcon className="h-5 w-5" />
         </button>
@@ -385,11 +399,12 @@ export default function ChatArea() {
         <button
           onClick={handleSendMessage}
           disabled={(!messageInput.trim() && !replyingTo) || isSubmitting}
-          className={`ml-2 p-2 rounded-full ${
+          className={`ml-2 p-2 rounded-full flex-shrink-0 ${
             (!messageInput.trim() && !replyingTo) || isSubmitting
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
+          aria-label="Send message"
         >
           <SendIcon className="h-5 w-5" />
         </button>

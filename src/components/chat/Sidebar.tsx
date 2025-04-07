@@ -7,7 +7,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatTimestamp, truncateText } from '@/lib/utils';
-import { PlusIcon, BellIcon, LogOutIcon, TrashIcon } from 'lucide-react';
+import { PlusIcon, BellIcon, LogOutIcon, TrashIcon, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deleteChat } from '@/lib/firebaseUtils';
 
@@ -15,9 +15,10 @@ interface SidebarProps {
   onNewChat: () => void;
   onShowInvites: () => void;
   pendingInvitesCount: number;
+  onCloseMobileSidebar?: () => void;
 }
 
-export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount }: SidebarProps) {
+export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount, onCloseMobileSidebar }: SidebarProps) {
   const { user, signOut } = useAuth();
   const { chats, selectedChatId, setSelectedChatId } = useAppStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -58,42 +59,56 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount 
   };
 
   return (
-    <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-full h-full border-r border-gray-200 bg-white flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        <Link href="/" className="text-blue-600 font-bold text-xl">VibeChat</Link>
-        <div className="relative">
-          <button 
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="focus:outline-none"
-          >
-            <Avatar 
-              src={user?.image}
-              name={user?.name || ''}
-              userId={user?.id || ''}
-              status={user?.status}
-              size="md"
-            />
-          </button>
-          
-          {/* User menu */}
-          {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-              <div className="py-2 px-4 border-b border-gray-200">
-                <p className="font-medium">{user?.name}</p>
-                <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-              </div>
-              <div className="py-1">
-                <button 
-                  onClick={handleSignOut}
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                >
-                  <LogOutIcon className="h-4 w-4 mr-2" />
-                  Sign out
-                </button>
-              </div>
-            </div>
+        <div className="flex items-center">
+          <Link href="/" className="text-blue-600 font-bold text-xl">VibeChat</Link>
+        </div>
+        <div className="flex items-center">
+          {/* Mobile close button */}
+          {onCloseMobileSidebar && (
+            <button 
+              onClick={onCloseMobileSidebar}
+              className="md:hidden p-2 mr-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
           )}
+          <div className="relative">
+            <button 
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="focus:outline-none"
+            >
+              <Avatar 
+                src={user?.image}
+                name={user?.name || ''}
+                userId={user?.id || ''}
+                status={user?.status}
+                size="md"
+              />
+            </button>
+            
+            {/* User menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="py-2 px-4 border-b border-gray-200">
+                  <p className="font-medium">{user?.name}</p>
+                  <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+                </div>
+                <div className="py-1">
+                  <button 
+                    onClick={handleSignOut}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                  >
+                    <LogOutIcon className="h-4 w-4 mr-2" />
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       

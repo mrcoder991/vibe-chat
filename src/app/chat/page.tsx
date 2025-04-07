@@ -7,12 +7,14 @@ import Sidebar from '@/components/chat/Sidebar';
 import ChatArea from '@/components/chat/ChatArea';
 import NewChatDialog from '@/components/chat/NewChatDialog';
 import PendingInvites from '@/components/chat/PendingInvites';
+import { Menu } from 'lucide-react';
 
 export default function ChatPage() {
   const { user } = useAuth();
   const { selectedChatId, chats, pendingInvites } = useAppStore();
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isInvitesOpen, setIsInvitesOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Show invites notification on initial load if there are pending invites
   useEffect(() => {
@@ -21,19 +23,69 @@ export default function ChatPage() {
     }
   }, [pendingInvites]);
 
+  // Only close the sidebar when a chat is initially selected (not when toggling)
+  useEffect(() => {
+    // Only close if sidebar is open and this is a new chat selection
+    if (selectedChatId && isMobileSidebarOpen) {
+      // Check if this was triggered by a click on a chat and not a manual toggle
+      const hasNavigatedToChat = true; // We'll always close on chat selection
+      if (hasNavigatedToChat) {
+        setIsMobileSidebarOpen(false);
+      }
+    }
+  }, [isMobileSidebarOpen, selectedChatId]);
+
+  // Add event listener for toggling sidebar from ChatArea
+  useEffect(() => {
+    const handleToggleSidebar = () => {
+      setIsMobileSidebarOpen(prev => !prev);
+    };
+    
+    document.addEventListener('toggle-sidebar', handleToggleSidebar);
+    
+    return () => {
+      document.removeEventListener('toggle-sidebar', handleToggleSidebar);
+    };
+  }, []);
+
+  // Toggle the sidebar for mobile
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen(prev => !prev);
+  };
+
   if (!user) return null;
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <Sidebar 
-        onNewChat={() => setIsNewChatOpen(true)}
-        onShowInvites={() => setIsInvitesOpen(true)}
-        pendingInvitesCount={pendingInvites.length}
-      />
+    <div className="flex h-full relative">
+      {/* Mobile sidebar toggle button - now visible even when sidebar is open */}
+      <button 
+        onClick={toggleMobileSidebar}
+        className="md:hidden absolute top-3 left-3 z-50 p-2 rounded-md bg-white shadow-md"
+        aria-label="Toggle sidebar"
+      >
+        <Menu className="h-5 w-5 text-gray-700" />
+      </button>
+
+      {/* Sidebar - hidden on mobile by default */}
+      <div className={`${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transform transition-transform duration-200 ease-in-out fixed md:static left-0 top-0 h-full z-40 md:z-auto md:w-80 w-[85%]`}>
+        <Sidebar 
+          onNewChat={() => setIsNewChatOpen(true)}
+          onShowInvites={() => setIsInvitesOpen(true)}
+          pendingInvitesCount={pendingInvites.length}
+          onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
+        />
+      </div>
+      
+      {/* Overlay for mobile sidebar */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/30 z-30"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
       
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col md:pl-0 pl-0">
         {selectedChatId ? (
           <ChatArea />
         ) : (
