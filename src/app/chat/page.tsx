@@ -25,19 +25,16 @@ export default function ChatPage() {
 
   // Only close the sidebar when a chat is initially selected (not when toggling)
   useEffect(() => {
-    // Only close if sidebar is open and this is a new chat selection
+    // If a new chat is selected and sidebar is open
     if (selectedChatId && isMobileSidebarOpen) {
-      // Check if this was triggered by a click on a chat and not a manual toggle
-      const hasNavigatedToChat = true; // We'll always close on chat selection
-      if (hasNavigatedToChat) {
-        setIsMobileSidebarOpen(false);
-      }
+      setIsMobileSidebarOpen(false);
     }
-  }, [isMobileSidebarOpen, selectedChatId]);
+  }, [selectedChatId]);
 
   // Add event listener for toggling sidebar from ChatArea
   useEffect(() => {
     const handleToggleSidebar = () => {
+      // Always toggle regardless of selection state
       setIsMobileSidebarOpen(prev => !prev);
     };
     
@@ -60,10 +57,10 @@ export default function ChatPage() {
       {/* Mobile sidebar toggle button - now visible even when sidebar is open */}
       <button 
         onClick={toggleMobileSidebar}
-        className="md:hidden absolute top-3 left-3 z-50 p-2 rounded-md bg-white shadow-md"
+        className="md:hidden absolute top-3 left-3 z-50 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-sm"
         aria-label="Toggle sidebar"
       >
-        <Menu className="h-5 w-5 text-gray-700" />
+        <Menu className="h-5 w-5" />
       </button>
 
       {/* Sidebar - hidden on mobile by default */}

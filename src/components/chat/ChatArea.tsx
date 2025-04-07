@@ -194,7 +194,7 @@ export default function ChatArea() {
       <div className="p-3 border-b border-gray-200 bg-white flex items-center">
         <button 
           onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
-          className="md:hidden mr-2 p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          className="md:hidden mr-3 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
           aria-label="Toggle sidebar"
         >
           <Menu className="h-5 w-5" />
