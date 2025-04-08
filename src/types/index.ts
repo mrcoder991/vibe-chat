@@ -47,6 +47,7 @@ export interface Message {
     id: string;
     content: string;
     senderId: string;
+    type?: "text" | "image";
   };
   timestamp: Timestamp;
   read: boolean;

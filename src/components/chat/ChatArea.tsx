@@ -29,8 +29,39 @@ export default function ChatArea() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
   
   const selectedChat = chats.find(chat => chat.id === selectedChatId);
+  
+  // Clear selected message when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setSelectedMessageId(null);
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+  
+  // Show mobile gesture hint for first-time users
+  useEffect(() => {
+    const hasShownMobileHint = localStorage.getItem('hasShownMobileMessageHint');
+    
+    // Only show on mobile/touch devices and if we haven't shown it before
+    if (!hasShownMobileHint && currentChatMessages.length > 0 && 'ontouchstart' in window) {
+      setTimeout(() => {
+        toast(
+          '💡 Tip: Long-press on any message to reply or delete.',
+          { duration: 5000 }
+        );
+        localStorage.setItem('hasShownMobileMessageHint', 'true');
+      }, 2000);
+    }
+  }, [currentChatMessages.length]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -61,12 +92,13 @@ export default function ChatArea() {
     
     setIsSubmitting(true);
     try {
-      let replyToInfo: { id: string; content: string; senderId: string } | undefined = undefined;
+      let replyToInfo: { id: string; content: string; senderId: string; type?: "text" | "image" } | undefined = undefined;
       if (replyingTo) {
         replyToInfo = {
           id: replyingTo.id,  
           content: replyingTo.content,
           senderId: replyingTo.senderId,
+          type: replyingTo.type
         };
       }
       
@@ -119,12 +151,13 @@ export default function ChatArea() {
     
     setIsSubmitting(true);
     try {
-      let replyToInfo: { id: string; content: string; senderId: string } | undefined = undefined;
+      let replyToInfo: { id: string; content: string; senderId: string; type?: "text" | "image" } | undefined = undefined;
       if (replyingTo) {
         replyToInfo = {
           id: replyingTo.id,
           content: replyingTo.content,
           senderId: replyingTo.senderId,
+          type: replyingTo.type
         };
       }
       
@@ -200,6 +233,34 @@ export default function ChatArea() {
     setSelectedImage(null);
   };
 
+  // Handle long press for mobile devices
+  const handleTouchStart = (messageId: string) => {
+    touchStartTimeRef.current = Date.now();
+    touchTimeoutRef.current = setTimeout(() => {
+      setSelectedMessageId(messageId);
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimeoutRef.current) {
+      // If touch ended before the long press timeout, clear it
+      clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (touchTimeoutRef.current) {
+      clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat header */}
@@ -239,12 +300,21 @@ export default function ChatArea() {
                 ? { name: user.name, image: user.image } 
                 : selectedChat.participantInfo[message.senderId] || { name: 'Unknown User' };
               
+              const isMessageSelected = selectedMessageId === message.id;
+              
               return (
                 <div 
                   key={message.id} 
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`flex ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} max-w-[90%] md:max-w-[80%] group`}>
+                  <div 
+                    className={`flex ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} max-w-[90%] md:max-w-[80%] group relative`}
+                    onTouchStart={() => handleTouchStart(message.id)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
                     <div className={`flex-shrink-0 ${isOwnMessage ? 'ml-2' : 'mr-2'} self-end hidden sm:block`}>
                       <Avatar 
                         src={senderInfo.image}
@@ -274,11 +344,32 @@ export default function ChatArea() {
                           <div className="font-medium">
                             {message.replyTo.senderId === user.id ? 'You' : selectedChat.participantInfo[message.replyTo.senderId]?.name || 'Unknown User'}
                           </div>
-                          <div className="truncate">
-                            {message.replyTo.content.length > 60 
-                              ? message.replyTo.content.substring(0, 60) + '...' 
-                              : message.replyTo.content}
-                          </div>
+                          {(message.replyTo.type === 'image' || 
+                            (message.replyTo.content && message.replyTo.content.startsWith('https://ik.imagekit.io/'))) ? (
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="w-6 h-6 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                                <Image
+                                  src={message.replyTo.content}
+                                  alt="Image attachment"
+                                  width={24}
+                                  height={24}
+                                  className="object-cover w-full h-full"
+                                  onError={(e) => {
+                                    // Replace with placeholder on error
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E';
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs">📷 Image attachment</span>
+                            </div>
+                          ) : (
+                            <div className="truncate">
+                              {message.replyTo.content.length > 60 
+                                ? message.replyTo.content.substring(0, 60) + '...' 
+                                : message.replyTo.content}
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -309,6 +400,7 @@ export default function ChatArea() {
                                 height={180}
                                 priority
                                 onClick={() => handleImageClick(message.content)}
+                                onContextMenu={(e) => e.preventDefault()}
                                 onError={(e) => {
                                   console.error('Error loading image:', e);
                                   // Replace with error placeholder
@@ -339,30 +431,39 @@ export default function ChatArea() {
                       </div>
                     </div>
                     
-                    {/* Message actions */}
+                    {/* Message actions - now visible on hover AND when selected */}
                     {!message.deleted && (
                       <div 
                         className={`
-                          flex items-end opacity-0 group-hover:opacity-100 transition-opacity mb-2 sm:mb-0
+                          flex items-end transition-opacity mb-2 sm:mb-0
                           ${isOwnMessage ? 'mr-2' : 'ml-2'}
+                          ${isMessageSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                         `}
                       >
-                        <div className="bg-white rounded-full shadow p-1 flex flex-row sm:flex-col">
+                        <div className="bg-white rounded-full shadow p-1 flex flex-row sm:flex-col space-x-1 sm:space-x-0 sm:space-y-1">
                           <button 
-                            onClick={() => setReplyingTo(message)}
-                            className="p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReplyingTo(message);
+                              setSelectedMessageId(null);
+                            }}
+                            className="p-1 sm:p-1 md:p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100"
                             aria-label="Reply to message"
                           >
-                            <ReplyIcon className="h-4 w-4" />
+                            <ReplyIcon className="h-5 w-5 sm:h-4 sm:w-4" />
                           </button>
                           
                           {isOwnMessage && (
                             <button 
-                              onClick={() => handleDeleteMessage(message)}
-                              className="p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 mt-0 sm:mt-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMessage(message);
+                                setSelectedMessageId(null);
+                              }}
+                              className="p-1 sm:p-1 md:p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 mt-0 sm:mt-1"
                               aria-label="Delete message"
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <TrashIcon className="h-5 w-5 sm:h-4 sm:w-4" />
                             </button>
                           )}
                         </div>
@@ -395,9 +496,28 @@ export default function ChatArea() {
               <span className="font-medium">
                 Replying to {replyingTo.senderId === user.id ? 'yourself' : selectedChat.participantInfo[replyingTo.senderId]?.name || 'Unknown User'}:
               </span>{' '}
-              {replyingTo.type === 'text' 
-                ? truncateText(replyingTo.content, 50)
-                : 'an image'}
+              {replyingTo.type === 'image' || 
+               (replyingTo.content && replyingTo.content.startsWith('https://ik.imagekit.io/')) ? (
+                <div className="flex items-center gap-1 mt-1 inline-flex">
+                  <div className="w-5 h-5 bg-gray-200 rounded overflow-hidden">
+                    <Image
+                      src={replyingTo.content}
+                      alt="Image attachment"
+                      width={20}
+                      height={20}
+                      className="object-cover w-full h-full"
+                      onError={(e) => {
+                        // Replace with placeholder on error
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                  <span>📷 Image attachment</span>
+                </div>
+              ) : (
+                truncateText(replyingTo.content, 50)
+              )}
             </div>
           </div>
           <button 
