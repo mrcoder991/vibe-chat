@@ -6,7 +6,7 @@ import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatMessageTime, truncateText } from '@/lib/utils';
 import { sendTextMessage, sendImageMessage, deleteMessage } from '@/lib/firebaseUtils';
-import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu } from 'lucide-react';
+import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
 import Image from 'next/image';
@@ -192,13 +192,6 @@ export default function ChatArea() {
     <div className="flex flex-col h-full">
       {/* Chat header */}
       <div className="p-3 border-b border-gray-200 bg-white flex items-center">
-        <button 
-          onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
-          className="md:hidden mr-3 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
         <Avatar 
           src={otherParticipantInfo.image}
           name={otherParticipantInfo.name}

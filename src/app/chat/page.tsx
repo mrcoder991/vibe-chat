@@ -57,7 +57,7 @@ export default function ChatPage() {
       {/* Mobile sidebar toggle button - now visible even when sidebar is open */}
       <button 
         onClick={toggleMobileSidebar}
-        className="md:hidden absolute top-3 left-3 z-50 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-sm"
+        className="md:hidden absolute top-3 left-3 z-30 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-sm"
         aria-label="Toggle sidebar"
       >
         <Menu className="h-5 w-5" />
