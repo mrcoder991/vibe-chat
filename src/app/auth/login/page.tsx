@@ -66,9 +66,9 @@ export default function LoginPage() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Sign in to your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-sm text-gray-800">
           Or{' '}
-          <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link href="/auth/signup" className="font-medium text-blue-700 hover:text-blue-800">
             create a new account
           </Link>
         </p>
@@ -84,6 +84,7 @@ export default function LoginPage() {
               fullWidth
               leftIcon={<EnvelopeIcon className="h-5 w-5" />}
               error={errors.email?.message}
+              placeholder='Enter your email address'
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -100,6 +101,7 @@ export default function LoginPage() {
               fullWidth
               leftIcon={<LockClosedIcon className="h-5 w-5" />}
               error={errors.password?.message}
+              placeholder='Enter your password'
               {...register('password', {
                 required: 'Password is required',
                 minLength: {
@@ -117,13 +119,13 @@ export default function LoginPage() {
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   {...register('rememberMe')}
                 />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="rememberMe" className="ml-2 block text-sm font-medium text-gray-800">
                   Remember me
                 </label>
               </div>
 
               <div className="text-sm">
-                <Link href="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link href="/auth/forgot-password" className="font-medium text-blue-700 hover:text-blue-800">
                   Forgot your password?
                 </Link>
               </div>

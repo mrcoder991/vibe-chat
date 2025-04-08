@@ -267,12 +267,12 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
                       onChange={(e) => setUserId(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Paste user ID here"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                     />
                     {userId && (
                       <button
                         onClick={() => setUserId('')}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
                       >
                         <XIcon className="h-4 w-4" />
                       </button>
@@ -317,12 +317,12 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Enter name or email"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                     />
                     {searchQuery && (
                       <button
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
                       >
                         <XIcon className="h-4 w-4" />
                       </button>

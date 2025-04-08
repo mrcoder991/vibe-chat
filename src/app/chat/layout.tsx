@@ -110,7 +110,7 @@ export default function ChatLayout({
       <div className="h-screen w-full flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-500">Checking authentication...</p>
+          <p className="text-gray-700">Checking authentication...</p>
         </div>
       </div>
     );

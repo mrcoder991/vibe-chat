@@ -69,9 +69,9 @@ export default function SignupPage() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Create a new account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-700">
+        <p className="mt-2 text-center text-sm text-gray-800">
           Or{' '}
-          <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link href="/auth/login" className="font-medium text-blue-700 hover:text-blue-800">
             sign in to your existing account
           </Link>
         </p>
@@ -103,6 +103,7 @@ export default function SignupPage() {
               fullWidth
               leftIcon={<EnvelopeIcon className="h-5 w-5" />}
               error={errors.email?.message}
+              placeholder='Enter your email address'
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -119,6 +120,7 @@ export default function SignupPage() {
               fullWidth
               leftIcon={<LockClosedIcon className="h-5 w-5" />}
               error={errors.password?.message}
+              placeholder='Enter your password'
               {...register('password', {
                 required: 'Password is required',
                 minLength: {

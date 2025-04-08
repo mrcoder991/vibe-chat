@@ -45,7 +45,7 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                 <XCircleIcon className="h-12 w-12 mx-auto" />
               </div>
               <p className="text-gray-700 font-medium">No pending invitations</p>
-              <p className="text-gray-500 text-sm mt-1 mb-6">
+              <p className="text-gray-600 text-sm mt-1 mb-6">
                 When someone invites you to chat, it will appear here.
               </p>
               
@@ -263,7 +263,7 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                   </svg>
                 </div>
                 <p className="text-gray-700 font-medium">No pending invitations</p>
-                <p className="text-gray-500 text-sm mt-1">
+                <p className="text-gray-500 text-sm mt-1 mb-6">
                   When someone invites you to chat, it will appear here.
                 </p>
               </div>
@@ -287,7 +287,7 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                             ? invite.senderName 
                             : 'Unknown User'}
                         </div>
-                        <div className="text-sm text-gray-500 mb-2">
+                        <div className="text-sm text-gray-600 mb-2">
                           Sent {formatTimestamp(invite.createdAt)}
                         </div>
                         <p className="text-sm text-gray-600">
@@ -342,7 +342,7 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                         disabled={processingInviteId === invite.id}
                         className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                           processingInviteId === invite.id
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
                       >

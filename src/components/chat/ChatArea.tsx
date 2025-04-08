@@ -6,10 +6,11 @@ import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatMessageTime, truncateText } from '@/lib/utils';
 import { sendTextMessage, sendImageMessage, deleteMessage } from '@/lib/firebaseUtils';
-import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon } from 'lucide-react';
+import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
 import Image from 'next/image';
+import ImageModal from '../ui/ImageModal';
 
 export default function ChatArea() {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ export default function ChatArea() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   const selectedChat = chats.find(chat => chat.id === selectedChatId);
   
@@ -188,10 +190,27 @@ export default function ChatArea() {
     }
   };
 
+  // Handle opening an image in the modal
+  const handleImageClick = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+  };
+
+  // Handle closing the image modal
+  const handleCloseModal = () => {
+    setSelectedImage(null);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat header */}
       <div className="p-3 border-b border-gray-200 bg-white flex items-center">
+      <button 
+          onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          className="md:hidden mr-3 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <Avatar 
           src={otherParticipantInfo.image}
           name={otherParticipantInfo.name}
@@ -285,11 +304,11 @@ export default function ChatArea() {
                               <Image 
                                 src={message.content} 
                                 alt="Message image" 
-                                className="object-contain rounded-md w-full h-auto"
+                                className="object-contain rounded-md w-full h-auto cursor-pointer"
                                 width={240}
                                 height={180}
                                 priority
-                                onClick={() => window.open(message.content, '_blank')}
+                                onClick={() => handleImageClick(message.content)}
                                 onError={(e) => {
                                   console.error('Error loading image:', e);
                                   // Replace with error placeholder
@@ -304,11 +323,6 @@ export default function ChatArea() {
                                   target.parentElement?.parentElement?.appendChild(errorMsg);
                                 }}
                               />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded-md">
-                                <div className="text-white text-xs font-medium bg-black bg-opacity-70 px-2 py-1 rounded">
-                                  Click to view full image
-                                </div>
-                              </div>
                             </div>
                           </div>
                         )
@@ -363,6 +377,15 @@ export default function ChatArea() {
         )}
       </div>
       
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal 
+          imageUrl={selectedImage} 
+          isOpen={!!selectedImage} 
+          onClose={handleCloseModal} 
+        />
+      )}
+      
       {/* Reply indicator */}
       {replyingTo && (
         <div className="bg-gray-100 p-2 border-t border-gray-200 flex items-center">
@@ -408,7 +431,7 @@ export default function ChatArea() {
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             rows={1}
             style={{ minHeight: '42px', maxHeight: '120px' }}
           />
