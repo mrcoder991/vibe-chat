@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
-import { getUserById, sendChatInvite, createChat, searchUsers } from '@/lib/firebaseUtils';
+import { getUserById, sendChatInvite, searchUsers } from '@/lib/firebaseUtils';
 import { XIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Avatar from '@/components/ui/Avatar';
@@ -15,7 +15,7 @@ interface NewChatDialogProps {
 
 export default function NewChatDialog({ onClose }: NewChatDialogProps) {
   const { user } = useAuth();
-  const { chats, addChat, setSelectedChatId } = useAppStore();
+  const { chats, setSelectedChatId } = useAppStore();
   const [userId, setUserId] = useState('');
   const [foundUser, setFoundUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -168,47 +168,21 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
         return;
       }
       
-      // Send chat invite
+      // Ensure we have the sender's name
+      const senderName = user.name || 'Unknown User';
+      console.log(`Sending chat invite with sender name: ${senderName}`);
+      
+      // Send chat invite - only send the invitation, don't create a chat yet
       await sendChatInvite(
         user.id,
-        user.name,
+        senderName,
         inviteUserId
       );
-      
-      // Create participant info with null instead of undefined for images
-      const participantInfo = {
-        [user.id]: {
-          name: user.name,
-          image: user.image || null,
-        },
-        [targetUser.id]: {
-          name: targetUser.name,
-          image: targetUser.image || null,
-        },
-      };
-      
-      // Create the chat
-      const chatId = await createChat(
-        [user.id, targetUser.id],
-        participantInfo
-      );
-      
-      // Add the chat to the store
-      addChat({
-        id: chatId,
-        participants: [user.id, targetUser.id],
-        participantInfo: participantInfo,
-        createdAt: { toDate: () => new Date() } as any,
-        updatedAt: { toDate: () => new Date() } as any,
-      });
       
       // Mark user as invited
       if (targetUser.id) {
         setInvitedUsers(prev => [...prev, targetUser.id]);
       }
-      
-      // Select the new chat
-      setSelectedChatId(chatId);
       
       toast.success(`Chat invitation sent to ${targetUser.name}`);
       onClose();
@@ -419,4 +393,4 @@ export default function NewChatDialog({ onClose }: NewChatDialogProps) {
       </div>
     </>
   );
-} 
+}

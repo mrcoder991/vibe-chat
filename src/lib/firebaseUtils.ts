@@ -134,10 +134,25 @@ export const sendChatInvite = async (
       return existingInvites.docs[0].id;
     }
     
+    // Make sure we have a valid sender name
+    let finalSenderName = senderName;
+    if (!finalSenderName || finalSenderName.trim() === '') {
+      // If senderName is empty, fetch it from the user document
+      const senderDoc = await getDoc(doc(db, 'users', senderId));
+      if (senderDoc.exists()) {
+        finalSenderName = senderDoc.data().name || 'Unknown User';
+      } else {
+        finalSenderName = 'Unknown User';
+      }
+      console.log(`Retrieved sender name from user document: ${finalSenderName}`);
+    }
+    
+    console.log(`Creating chat invite from ${finalSenderName} (${senderId}) to ${recipientId}`);
+    
     // Create new invite
     const inviteRef = await addDoc(collection(db, 'invites'), {
       senderId,
-      senderName,
+      senderName: finalSenderName,
       recipientId,
       status: 'pending',
       createdAt: serverTimestamp(),
@@ -628,6 +643,53 @@ export const markMessagesAsRead = async (
   } catch (error) {
     console.error("Error marking messages as read:", error);
     // Don't throw the error, just return false
+    return false;
+  }
+};
+
+// New function to update participant info in a chat
+export const updateChatParticipantInfo = async (
+  chatId: string,
+  participantId: string,
+  updates: Partial<{ name: string; image: string | null }>
+): Promise<boolean> => {
+  try {
+    console.log(`Updating participant info for ${participantId} in chat ${chatId}:`, updates);
+    
+    // Get the current chat data
+    const chatRef = doc(db, 'chats', chatId);
+    const chatDoc = await getDoc(chatRef);
+    
+    if (!chatDoc.exists()) {
+      console.error(`Chat ${chatId} not found`);
+      return false;
+    }
+    
+    const chatData = chatDoc.data() as Chat;
+    
+    // Verify the participant exists in this chat
+    if (!chatData.participants.includes(participantId)) {
+      console.error(`Participant ${participantId} not found in chat ${chatId}`);
+      return false;
+    }
+    
+    // Create the update object with the new participant info
+    const updateObj = {
+      [`participantInfo.${participantId}`]: {
+        ...chatData.participantInfo[participantId],
+        ...updates
+      }
+    };
+    
+    console.log('Updating with:', updateObj);
+    
+    // Update the chat document
+    await updateDoc(chatRef, updateObj);
+    
+    console.log(`Successfully updated participant info for ${participantId} in chat ${chatId}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating participant info in chat ${chatId}:`, error);
     return false;
   }
 }; 

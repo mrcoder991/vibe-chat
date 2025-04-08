@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
-import { updateInviteStatus, getUserById, createChat } from '@/lib/firebaseUtils';
+import { updateInviteStatus, getUserById, createChat, updateChatParticipantInfo } from '@/lib/firebaseUtils';
 import { XIcon, XCircleIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Avatar from '@/components/ui/Avatar';
@@ -15,7 +15,7 @@ interface PendingInvitesProps {
 
 export default function PendingInvites({ onClose }: PendingInvitesProps) {
   const { user } = useAuth();
-  const { pendingInvites, addChat, setSelectedChatId } = useAppStore();
+  const { pendingInvites, addChat, setSelectedChatId, chats } = useAppStore();
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
   
   // If no invites, show a message
@@ -71,10 +71,73 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
       // Update invite status
       await updateInviteStatus(inviteId, 'accepted');
       
+      // Check if a chat already exists with this user
+      const existingChat = chats.find(chat => {
+        return chat.participants.includes(senderId) && 
+               chat.participants.includes(user.id) && 
+               chat.participants.length === 2;
+      });
+      
+      if (existingChat) {
+        console.log('Chat already exists, using existing chat:', existingChat.id);
+        
+        // Check if the existing chat has the correct sender name
+        const senderInfo = existingChat.participantInfo[senderId];
+        if (senderInfo && senderInfo.name === 'Anonymous User') {
+          console.log('Fixing Anonymous User name in existing chat');
+          
+          // Get sender user data to update the name
+          const senderUser = await getUserById(senderId);
+          if (senderUser && senderUser.name && senderUser.name !== 'Anonymous User') {
+            console.log(`Updating sender name from 'Anonymous User' to '${senderUser.name}'`);
+            
+            // Update the existing chat with the correct name
+            const success = await updateChatParticipantInfo(existingChat.id, senderId, {
+              name: senderUser.name
+            });
+            
+            if (success) {
+              // Update the local state to reflect the change
+              // This updates the chat in the zustand store
+              const updatedParticipantInfo = {
+                ...existingChat.participantInfo,
+                [senderId]: {
+                  ...existingChat.participantInfo[senderId],
+                  name: senderUser.name
+                }
+              };
+              
+              const updatedChat = {
+                ...existingChat,
+                participantInfo: updatedParticipantInfo
+              };
+              
+              // Update the chat in the store
+              useAppStore.getState().updateChat(existingChat.id, updatedChat);
+              
+              toast.success(`Fixed chat with ${senderUser.name}`);
+            }
+          }
+        }
+        
+        // Just select the existing chat instead of creating a new one
+        setSelectedChatId(existingChat.id);
+        toast.success(`You are now connected with ${senderName}`);
+        onClose();
+        return;
+      }
+      
       // Get sender user object
+      console.log(`Getting user data for sender ID: ${senderId}`);
       const senderUser = await getUserById(senderId);
       
       if (senderUser) {
+        console.log(`Sender user data:`, senderUser);
+        
+        // Use the fetched user's name if available, otherwise use the name from the invite
+        const actualSenderName = senderUser.name || senderName || 'Unknown User';
+        console.log(`Using sender name: ${actualSenderName}`);
+        
         // Create participant info with null instead of undefined for images
         const participantInfo = {
           [user.id]: {
@@ -82,16 +145,20 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
             image: user.image || null, // Use null instead of undefined
           },
           [senderId]: {
-            name: senderUser.name,
+            name: actualSenderName,
             image: senderUser.image || null, // Use null instead of undefined
           },
         };
+        
+        console.log('Creating chat with participant info:', participantInfo);
         
         // Create the chat
         const chatId = await createChat(
           [user.id, senderId],
           participantInfo
         );
+        
+        console.log(`Chat created with ID: ${chatId}`);
         
         // Add chat to store
         addChat({
@@ -107,8 +174,11 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
         
         // Remove invite is now handled automatically by the real-time listener
         
-        toast.success(`You are now connected with ${senderName}`);
+        toast.success(`You are now connected with ${actualSenderName}`);
         onClose();
+      } else {
+        console.error(`Failed to get user data for sender ID: ${senderId}`);
+        toast.error('Could not get sender information. Please try again.');
       }
     } catch (error) {
       console.error('Error accepting invite:', error);
@@ -213,7 +283,9 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                       />
                       <div className="ml-3 flex-1">
                         <div className="font-medium">
-                          {invite.senderName || 'Unknown User'}
+                          {invite.senderName && invite.senderName.trim() !== '' 
+                            ? invite.senderName 
+                            : 'Unknown User'}
                         </div>
                         <div className="text-sm text-gray-500 mb-2">
                           Sent {formatTimestamp(invite.createdAt)}
@@ -225,7 +297,11 @@ export default function PendingInvites({ onClose }: PendingInvitesProps) {
                     </div>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => handleAcceptInvite(invite.id, invite.senderId, invite.senderName)}
+                        onClick={() => handleAcceptInvite(
+                          invite.id, 
+                          invite.senderId, 
+                          invite.senderName && invite.senderName.trim() !== '' ? invite.senderName : 'Unknown User'
+                        )}
                         disabled={processingInviteId === invite.id}
                         className={`flex-1 py-2 px-3 rounded-md text-white text-sm font-medium transition-colors ${
                           processingInviteId === invite.id
