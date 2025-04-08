@@ -516,7 +516,7 @@ export default function ChatArea() {
                   <span>📷 Image attachment</span>
                 </div>
               ) : (
-                truncateText(replyingTo.content, 50)
+                truncateText(replyingTo.content, 35)
               )}
             </div>
           </div>
