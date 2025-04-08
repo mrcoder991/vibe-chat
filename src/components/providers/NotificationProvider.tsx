@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import { toast } from 'react-hot-toast';
-import { BellIcon, BellOffIcon } from 'lucide-react';
+import { BellOffIcon } from 'lucide-react';
 import { 
   notificationsSupported, 
   requestNotificationPermission, 
@@ -79,18 +79,18 @@ export default function NotificationProvider({ children }: { children: React.Rea
       return;
     }
     
-    // Skip notifications for the active chat when it's selected
-    if (selectedChatId) {
+    // Find the current chat
+    const currentChat = chats.find(chat => chat.id === selectedChatId);
+    if (!currentChat) return;
+    
+    // Skip notifications for the active chat when it's visible
+    if (selectedChatId && document.visibilityState === 'visible') {
       // Update count for tracking purposes
       const messagesMap = new Map(prevMessagesMap);
       messagesMap.set(selectedChatId, currentChatMessages.length);
       setPrevMessagesMap(messagesMap);
       return;
     }
-    
-    // Find the current chat
-    const currentChat = chats.find(chat => chat.id === selectedChatId);
-    if (!currentChat) return;
     
     // Check for new messages
     const prevCount = prevMessagesMap.get(selectedChatId || '') || 0;

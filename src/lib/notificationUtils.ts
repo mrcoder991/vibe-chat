@@ -32,6 +32,39 @@ export const getNotificationPermissionStatus = (): string => {
   return Notification.permission;
 };
 
+// Check if the current device is a mobile device
+export const isMobileDevice = (): boolean => {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
+// Function to check if notifications are supported and available
+export const areNotificationsAvailable = (): boolean => {
+  // Basic check for notification support
+  if (!notificationsSupported()) {
+    return false;
+  }
+  
+  // iOS PWA special case - notifications don't work in PWA mode on iOS
+  const isIOSPWA = 
+    isMobileDevice() && 
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+    (window.navigator as any).standalone;
+    
+  if (isIOSPWA) {
+    console.warn('Notifications are not fully supported in iOS PWA mode');
+    // Return true anyway to allow the user to try, but log a warning
+    return true;
+  }
+  
+  return true;
+};
+
 // Check if the document is currently visible
 export const isDocumentVisible = (): boolean => {
   return typeof document !== 'undefined' && document.visibilityState === 'visible';
@@ -143,8 +176,19 @@ export const saveCurrentUserToLocalStorage = (user: User): void => {
 
 // Function to play notification sound
 export const playNotificationSound = (type: NotificationType = 'message'): void => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return;
+  }
+  
   try {
     const audio = new Audio(`/sounds/${type}.mp3`);
+    
+    // Add error handling for missing sound files
+    audio.addEventListener('error', (e) => {
+      console.warn(`Could not load notification sound for ${type}:`, e);
+    });
+    
     audio.play().catch(error => {
       // Browsers often block autoplay without user interaction
       console.warn('Could not play notification sound:', error);

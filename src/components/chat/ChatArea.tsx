@@ -5,12 +5,13 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatMessageTime, truncateText } from '@/lib/utils';
-import { sendTextMessage, sendImageMessage, deleteMessage } from '@/lib/firebaseUtils';
+import { deleteMessage, sendImageMessage, sendTextMessage } from '@/lib/firebaseUtils';
 import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
 import Image from 'next/image';
 import ImageModal from '../ui/ImageModal';
+import { Timestamp } from 'firebase/firestore';
 
 export default function ChatArea() {
   const { user } = useAuth();
@@ -121,7 +122,7 @@ export default function ChatArea() {
         content: messageInput,
         type: 'text',
         replyTo: replyToInfo,
-        timestamp: { toDate: () => new Date() } as any,
+        timestamp: Timestamp.now(),
         read: false,
         deleted: false,
       });

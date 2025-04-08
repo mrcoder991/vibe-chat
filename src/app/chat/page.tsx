@@ -29,7 +29,7 @@ export default function ChatPage() {
     if (selectedChatId && isMobileSidebarOpen) {
       setIsMobileSidebarOpen(false);
     }
-  }, [selectedChatId]);
+  }, [selectedChatId, isMobileSidebarOpen]);
 
   // Add event listener for toggling sidebar from ChatArea
   useEffect(() => {
