@@ -283,16 +283,40 @@ export default function ChatArea() {
                         message.deleted ? (
                           <span className="italic opacity-70">This image was deleted</span>
                         ) : (
-                          <div className="relative">
-                            <Image 
-                              src={message.content} 
-                              alt="Message image" 
-                              className="rounded max-w-full max-h-60 object-contain" 
-                              onClick={() => window.open(message.content, '_blank')}
-                              style={{ cursor: 'pointer' }}
-                              width={300}
-                              height={200}
-                            />
+                          <div className={`
+                            rounded-md overflow-hidden 
+                            ${isOwnMessage ? 'bg-blue-700' : 'bg-gray-100'} 
+                            p-1 max-w-[240px]
+                          `}>
+                            <div className="relative aspect-auto">
+                              <Image 
+                                src={message.content} 
+                                alt="Message image" 
+                                className="object-contain rounded-md w-full h-auto"
+                                width={240}
+                                height={180}
+                                priority
+                                onClick={() => window.open(message.content, '_blank')}
+                                onError={(e) => {
+                                  console.error('Error loading image:', e);
+                                  // Replace with error placeholder
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E';
+                                  // Add padding and styling for error state
+                                  target.parentElement?.classList.add('p-8', 'flex', 'justify-center', 'items-center', 'bg-gray-200');
+                                  // Add error message below
+                                  const errorMsg = document.createElement('div');
+                                  errorMsg.innerText = 'Image failed to load';
+                                  errorMsg.className = 'text-xs text-red-500 text-center mt-1';
+                                  target.parentElement?.parentElement?.appendChild(errorMsg);
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded-md">
+                                <div className="text-white text-xs font-medium bg-black bg-opacity-70 px-2 py-1 rounded">
+                                  Click to view full image
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         )
                       )}

@@ -301,18 +301,22 @@ export const sendImageMessage = async (
   replyTo?: { id: string; content: string; senderId: string }
 ): Promise<string> => {
   try {
-    // Upload image to ImageKit via API
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('fileName', `${uuidv4()}_${file.name}`);
-    formData.append('folder', `chat_images/${chatId}`);
+    // Generate a unique filename
+    const uniqueFileName = `${uuidv4()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const folder = `chat_images/${chatId}`;
     
+    console.log(`Uploading image: ${uniqueFileName} to folder: ${folder}`);
+    
+    // Convert file to base64
+    const base64Image = await fileToBase64(file);
+    
+    // Upload image to ImageKit via API
     const response = await fetch('/api/upload-image', {
       method: 'POST',
       body: JSON.stringify({
-        image: await fileToBase64(file),
-        fileName: `${uuidv4()}_${file.name}`,
-        folder: `chat_images/${chatId}`
+        image: base64Image,
+        fileName: uniqueFileName,
+        folder: folder
       }),
       headers: {
         'Content-Type': 'application/json'
@@ -320,14 +324,23 @@ export const sendImageMessage = async (
     });
     
     if (!response.ok) {
-      throw new Error('Failed to upload image');
+      const errorData = await response.text();
+      console.error('Image upload failed:', errorData);
+      throw new Error(`Failed to upload image: ${errorData}`);
     }
     
     const uploadResult = await response.json();
+    
+    if (!uploadResult.success) {
+      throw new Error('Image upload was not successful');
+    }
+    
     const downloadUrl = uploadResult.url;
     const fileId = uploadResult.fileId;
     
-    // Create message data without the replyTo field initially
+    console.log(`Image uploaded successfully. URL: ${downloadUrl}, FileID: ${fileId}`);
+    
+    // Create message data with all necessary metadata
     const messageData: any = {
       chatId,
       senderId,
@@ -336,7 +349,14 @@ export const sendImageMessage = async (
       timestamp: serverTimestamp(),
       read: false,
       deleted: false,
-      imageId: fileId, // Store ImageKit fileId instead
+      imageId: fileId,
+      imageMeta: {
+        originalName: file.name,
+        size: file.size,
+        type: file.type,
+        width: 0, // We can't know this client-side easily
+        height: 0, // We can't know this client-side easily
+      }
     };
     
     // Only add replyTo if all required fields are present and not undefined
