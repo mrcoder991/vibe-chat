@@ -1,0 +1,12 @@
+For the notification sounds to work properly, you need to add the following MP3 files to this directory:
+
+1. message.mp3 - Sound for new messages
+2. invite.mp3 - Sound for new chat invitations 
+3. accepted.mp3 - Sound for when a chat invitation is accepted
+
+You can find royalty-free notification sounds on sites like:
+- pixabay.com/sound-effects/
+- freesound.org
+- mixkit.co/free-sound-effects/notification/
+
+Alternatively, convert short sounds to MP3 and add them to this directory. 

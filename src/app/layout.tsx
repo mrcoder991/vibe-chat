@@ -4,6 +4,8 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AuthProvider from "@/components/providers/AuthProvider";
 import FirebaseErrorHandler from "@/components/providers/FirebaseErrorHandler";
+import NotificationProvider from "@/components/providers/NotificationProvider";
+import 'react-tooltip/dist/react-tooltip.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,9 +39,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          {children}
-          <Toaster position="top-center" />
-          <FirebaseErrorHandler />
+          <NotificationProvider>
+            {children}
+            <Toaster position="top-center" />
+            <FirebaseErrorHandler />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

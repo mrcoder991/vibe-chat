@@ -10,6 +10,7 @@ import { formatTimestamp, truncateText } from '@/lib/utils';
 import { PlusIcon, BellIcon, LogOutIcon, TrashIcon, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deleteChat } from '@/lib/firebaseUtils';
+import NotificationToggle from '@/components/ui/NotificationToggle';
 
 interface SidebarProps {
   onNewChat: () => void;
@@ -132,6 +133,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
             </span>
           )}
         </button>
+        <NotificationToggle />
       </div>
       
       {/* Chat list */}

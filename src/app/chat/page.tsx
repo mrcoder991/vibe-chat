@@ -44,6 +44,19 @@ export default function ChatPage() {
       document.removeEventListener('toggle-sidebar', handleToggleSidebar);
     };
   }, []);
+  
+  // Add event listener for showing invites dialog from notifications
+  useEffect(() => {
+    const handleShowInvites = () => {
+      setIsInvitesOpen(true);
+    };
+    
+    document.addEventListener('show-invites-dialog', handleShowInvites);
+    
+    return () => {
+      document.removeEventListener('show-invites-dialog', handleShowInvites);
+    };
+  }, []);
 
   // Toggle the sidebar for mobile
   const toggleMobileSidebar = () => {

@@ -7,6 +7,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { User } from '@/types';
 import { toast } from 'react-hot-toast';
+import { saveCurrentUserToLocalStorage } from '@/lib/notificationUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -54,6 +55,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         // Store in state immediately to allow app to function
         setUser(userData);
+        
+        // Save user info to localStorage for notification filtering
+        saveCurrentUserToLocalStorage(userData);
 
         // Set a timeout for Firestore operations
         const firestoreTimeout = setTimeout(() => {
