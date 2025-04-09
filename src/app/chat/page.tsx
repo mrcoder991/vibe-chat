@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isInvitesOpen, setIsInvitesOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [previousChatId, setPreviousChatId] = useState<string | null>(null);
 
   // Show invites notification on initial load if there are pending invites
   useEffect(() => {
@@ -25,11 +26,15 @@ export default function ChatPage() {
 
   // Only close the sidebar when a chat is initially selected (not when toggling)
   useEffect(() => {
-    // If a new chat is selected and sidebar is open
-    if (selectedChatId && isMobileSidebarOpen) {
+    // Only close the sidebar if a new chat is selected
+    // This prevents the sidebar from closing when manually toggled
+    if (selectedChatId && selectedChatId !== previousChatId && isMobileSidebarOpen) {
       setIsMobileSidebarOpen(false);
     }
-  }, [selectedChatId, isMobileSidebarOpen]);
+    
+    // Update previous chat id
+    setPreviousChatId(selectedChatId);
+  }, [selectedChatId, isMobileSidebarOpen, previousChatId]);
 
   // Add event listener for toggling sidebar from ChatArea
   useEffect(() => {

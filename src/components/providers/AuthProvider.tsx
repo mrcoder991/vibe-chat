@@ -42,6 +42,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const setupUser = async (fbUser: FirebaseUser) => {
       try {
         console.log("Setting up user from Firebase auth:", fbUser.uid);
+        console.log("User displayName from Firebase:", fbUser.displayName);
+        
+        // Add a small delay to ensure Firebase has fully propagated profile updates
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Refresh the user data to ensure we have the latest profile
+        await fbUser.reload();
+        console.log("User displayName after reload:", fbUser.displayName);
         
         // Create user data structure even if Firestore operations fail
         // This ensures basic app functionality without Firestore
@@ -52,6 +60,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           image: fbUser.photoURL || '',
           status: 'online',
         };
+
+        console.log("User data being set in state:", userData);
 
         // Store in state immediately to allow app to function
         setUser(userData);
@@ -122,13 +132,29 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (firebaseUser) {
       setupUser(firebaseUser).catch(err => {
         console.error("Setup user failed:", err);
-        // Still set basic user data
-        setUser({
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Anonymous User',
-          email: firebaseUser.email || '',
-          image: firebaseUser.photoURL || '',
-          status: 'online',
+        
+        // Reload the user to get the latest profile data
+        firebaseUser.reload().then(() => {
+          console.log("User displayName after reload in error handler:", firebaseUser.displayName);
+          
+          // Still set basic user data
+          setUser({
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Anonymous User',
+            email: firebaseUser.email || '',
+            image: firebaseUser.photoURL || '',
+            status: 'online',
+          });
+        }).catch(reloadErr => {
+          console.error("Failed to reload user in error handler:", reloadErr);
+          // Set basic user data with whatever we have
+          setUser({
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Anonymous User',
+            email: firebaseUser.email || '',
+            image: firebaseUser.photoURL || '',
+            status: 'online',
+          });
         });
       });
     } else {

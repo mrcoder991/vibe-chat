@@ -35,6 +35,8 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
+      console.log("Starting user creation with name:", data.name);
+      
       // Create user with email and password
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -42,13 +44,22 @@ export default function SignupPage() {
         data.password
       );
       
+      console.log("User created, updating profile with name:", data.name);
+      
       // Update profile with display name
       await updateProfile(userCredential.user, {
         displayName: data.name,
       });
       
+      console.log("Profile updated successfully with name:", data.name);
+      
       toast.success('Account created successfully!');
-      router.push('/chat');
+      
+      // Small delay to ensure Firebase processes the profile update
+      // before redirecting to the chat page
+      setTimeout(() => {
+        router.push('/chat');
+      }, 1000);
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         toast.error('Email already in use. Please use a different email or login.');
