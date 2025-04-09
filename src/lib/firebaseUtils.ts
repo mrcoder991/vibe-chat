@@ -288,6 +288,8 @@ export const sendTextMessage = async (
       messageData.replyTo = replyTo;
     }
     
+    console.log('Sending new text message with read status: false');
+    
     // Add message to messages collection
     const messageRef = await addDoc(collection(db, 'messages'), messageData);
     
@@ -373,6 +375,8 @@ export const sendImageMessage = async (
         height: 0, // We can't know this client-side easily
       }
     };
+    
+    console.log('Sending new image message with read status: false');
     
     // Only add replyTo if all required fields are present and not undefined
     if (replyTo && replyTo.id && replyTo.content && replyTo.senderId) {
@@ -593,6 +597,8 @@ export const markMessagesAsRead = async (
   userId: string
 ): Promise<boolean> => {
   try {
+    console.log(`Marking messages as read in chat ${chatId} for user ${userId}`);
+    
     // First, verify if the user is a participant in this chat
     // This is important to maintain security
     const chatRef = doc(db, 'chats', chatId);
@@ -609,18 +615,21 @@ export const markMessagesAsRead = async (
       return false;
     }
     
-    // Get unread messages
+    // Get unread messages sent by others (not by the current user)
     const messagesQuery = query(
       collection(db, 'messages'),
       where('chatId', '==', chatId),
-      where('senderId', '!=', userId),
-      where('read', '==', false)
+      where('senderId', '!=', userId),  // Messages NOT sent by current user
+      where('read', '==', false)        // Messages that haven't been read yet
     );
     const messagesSnapshot = await getDocs(messagesQuery);
     
     if (messagesSnapshot.empty) {
+      console.log("No unread messages to mark as read");
       return true; // No messages to mark as read
     }
+    
+    console.log(`Found ${messagesSnapshot.docs.length} unread messages to mark as read`);
     
     // Instead of updating all messages at once, do it one by one with error handling
     let successCount = 0;
@@ -628,8 +637,15 @@ export const markMessagesAsRead = async (
     
     for (const doc of messagesSnapshot.docs) {
       try {
-        await updateDoc(doc.ref, { read: true });
-        successCount++;
+        // Only mark messages as read if the document is actually visible
+        // This ensures messages are only marked when user is actively viewing them
+        if (document.visibilityState === 'visible') {
+          await updateDoc(doc.ref, { read: true });
+          successCount++;
+          console.log(`Marked message ${doc.id} as read`);
+        } else {
+          console.log(`Skipping marking message ${doc.id} as read - document not visible`);
+        }
       } catch (updateError) {
         console.warn(`Could not mark message ${doc.id} as read:`, updateError);
         // Continue with other messages even if one fails
@@ -638,12 +654,73 @@ export const markMessagesAsRead = async (
     
     // Return true if at least some messages were marked as read
     console.log(`Marked ${successCount}/${totalMessages} messages as read`);
+    
+    // If we successfully marked any messages as read, try to update the unread count
+    if (successCount > 0) {
+      try {
+        // This is assuming useAppStore has been imported - if it needs to be imported, do so at the top of the file
+        // We use a small delay to ensure Firestore has time to update
+        setTimeout(() => {
+          import('@/store/useAppStore').then(({ useAppStore }) => {
+            useAppStore.getState().calculateUnreadCounts(userId);
+          });
+        }, 200);
+      } catch (countError) {
+        console.warn("Could not update unread counts:", countError);
+      }
+    }
+    
     return successCount > 0;
     
   } catch (error) {
     console.error("Error marking messages as read:", error);
     // Don't throw the error, just return false
     return false;
+  }
+};
+
+// Subscribe to read status changes for messages sent by a specific user in a chat
+export const subscribeToReadStatus = (
+  chatId: string,
+  userId: string,
+  callback: (messageIds: string[]) => void,
+  onError?: (error: Error) => void
+): () => void => {
+  try {
+    // Query for messages sent by the user in the specified chat that have been read
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      where('chatId', '==', chatId),
+      where('senderId', '==', userId),  // Messages sent by this user
+      where('read', '==', true)         // That have been marked as read by recipient
+    );
+
+    console.log(`Setting up read status subscription for chat ${chatId}, user ${userId}`);
+
+    // Create a real-time listener for read status changes
+    const unsubscribe = onSnapshot(
+      messagesQuery,
+      (snapshot) => {
+        const readMessageIds = snapshot.docs.map(doc => doc.id);
+        console.log(`Read status update: ${readMessageIds.length} messages marked as read`);
+        if (readMessageIds.length > 0) {
+          console.log(`Read message IDs: ${readMessageIds.join(', ')}`);
+        }
+        callback(readMessageIds);
+      },
+      (error) => {
+        console.error("Error in read status subscription:", error);
+        if (onError) onError(error);
+      }
+    );
+
+    // Return the unsubscribe function
+    return unsubscribe;
+  } catch (error) {
+    console.error("Error setting up read status subscription:", error);
+    if (onError) onError(error as Error);
+    // Return a no-op function if setup failed
+    return () => {};
   }
 };
 

@@ -5,8 +5,8 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatMessageTime, truncateText } from '@/lib/utils';
-import { deleteMessage, sendImageMessage, sendTextMessage } from '@/lib/firebaseUtils';
-import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu } from 'lucide-react';
+import { deleteMessage, sendImageMessage, sendTextMessage, markMessagesAsRead } from '@/lib/firebaseUtils';
+import { ImageIcon, SendIcon, XIcon, ReplyIcon, TrashIcon, Menu, CheckIcon, CheckCheckIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Message } from '@/types';
 import Image from 'next/image';
@@ -79,6 +79,50 @@ export default function ChatArea() {
     // This effect's cleanup will be handled by the store's setSelectedChatId method
     // which will unsubscribe from the previous chat when changing to a new one
   }, [selectedChatId, user, subscribeToSelectedChatMessages]);
+  
+  // Mark messages as read when document becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && selectedChatId && user) {
+        console.log('Tab/window became visible - will mark messages as read after delay');
+        
+        // Add a small delay to make sure the user is actually looking at the chat
+        // and not just switching between tabs briefly
+        setTimeout(() => {
+          // Check again if document is still visible and chat is still selected
+          if (document.visibilityState === 'visible' && selectedChatId) {
+            console.log('Marking messages as read after visibility change');
+            markMessagesAsRead(selectedChatId, user.id).catch(error => {
+              console.warn('Non-critical error marking messages as read on visibility change:', error);
+            });
+          } else {
+            console.log('Visibility conditions no longer met - not marking messages as read');
+          }
+        }, 2000); // 2 second delay to ensure user is actually looking at the chat
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Initial check when component mounts - only mark as read after a delay
+    if (document.visibilityState === 'visible' && selectedChatId && user) {
+      console.log('Initial visibility check - will mark messages as read after delay');
+      
+      // Add a delay to ensure user has time to actually look at the messages
+      setTimeout(() => {
+        if (document.visibilityState === 'visible' && selectedChatId) {
+          console.log('Marking messages as read on initial load after delay');
+          markMessagesAsRead(selectedChatId, user.id).catch(error => {
+            console.warn('Non-critical error marking messages as read on initial load:', error);
+          });
+        }
+      }, 3000); // 3 second delay on initial load
+    }
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedChatId, user]);
 
   if (!selectedChat || !selectedChatId || !user) {
     return null;
@@ -421,14 +465,27 @@ export default function ChatArea() {
                         )
                       )}
                       
-                      {/* Message time */}
+                      {/* Message time and read receipt */}
                       <div 
                         className={`
-                          text-xs mt-1
+                          text-xs mt-1 flex items-center space-x-1 justify-end
                           ${isOwnMessage ? 'text-blue-100' : 'text-gray-600'}
                         `}
                       >
-                        {formatMessageTime(message.timestamp)}
+                        <span>{formatMessageTime(message.timestamp)}</span>
+                        {isOwnMessage && (
+                          <span 
+                            className="ml-1 flex items-center transition-opacity"
+                            title={message.read ? "Read" : "Delivered"}
+                            onClick={() => console.log(`Message ${message.id} read status: ${message.read ? 'Read' : 'Unread'}`)}
+                          >
+                            {message.read ? (
+                              <CheckCheckIcon className="h-4 w-4 text-green-300" aria-label="Read" />
+                            ) : (
+                              <CheckIcon className="h-4 w-4 text-blue-200 opacity-70" aria-label="Delivered" />
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                     

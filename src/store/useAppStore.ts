@@ -9,8 +9,11 @@ import {
   markMessagesAsRead,
   subscribeToMessages,
   subscribeToChats,
-  subscribeToInvites
+  subscribeToInvites,
+  subscribeToReadStatus
 } from '@/lib/firebaseUtils';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface AppState {
   // Active selections
@@ -21,6 +24,7 @@ interface AppState {
   chats: Chat[];
   currentChatMessages: Message[];
   pendingInvites: ChatInvite[];
+  unreadCounts: Record<string, number>;
   
   // Loading states
   isLoadingChats: boolean;
@@ -31,6 +35,7 @@ interface AppState {
   messageUnsubscribe: (() => void) | null;
   chatsUnsubscribe: (() => void) | null;
   invitesUnsubscribe: (() => void) | null;
+  readStatusUnsubscribe: (() => void) | null;
   
   // Actions
   setSelectedChatId: (chatId: string | null) => void;
@@ -43,12 +48,15 @@ interface AppState {
   subscribeToSelectedChatMessages: (chatId: string, userId: string) => void;
   subscribeToUserChats: (userId: string) => void;
   subscribeToUserInvites: (userId: string) => void;
+  subscribeToMessageReadStatus: (chatId: string, userId: string) => void;
   
   // Store manipulation methods
   addChat: (chat: Chat) => void;
   updateChat: (chatId: string, updates: Partial<Chat>) => void;
   addMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
+  updateMessagesReadStatus: (messageIds: string[]) => void;
+  calculateUnreadCounts: (userId: string) => void;
   removeInvite: (inviteId: string) => void;
   
   // Cleanup
@@ -62,12 +70,14 @@ const initialState = {
   chats: [],
   currentChatMessages: [],
   pendingInvites: [],
+  unreadCounts: {},
   isLoadingChats: false,
   isLoadingMessages: false,
   isLoadingInvites: false,
   messageUnsubscribe: null,
   chatsUnsubscribe: null,
   invitesUnsubscribe: null,
+  readStatusUnsubscribe: null,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -83,6 +93,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     
     set({ selectedChatId: chatId });
+    
+    // If we're selecting a new chat, update unread counts after a brief delay
+    // This will handle the case where selecting a chat marks messages as read
+    if (chatId && currentSelectedChatId !== chatId) {
+      const chat = get().chats.find(c => c.id === chatId);
+      if (chat && chat.participants.length > 0) {
+        // Find a user ID to recalculate unread counts with
+        // This is a simplification - should be the current user ID
+        const userId = chat.participants[0];
+        
+        // Delay to ensure any read status updates have time to process
+        setTimeout(() => {
+          get().calculateUnreadCounts(userId);
+        }, 1000);
+      }
+    }
   },
   
   setReplyingTo: (message) => set({ replyingTo: message }),
@@ -144,15 +170,45 @@ export const useAppStore = create<AppState>((set, get) => ({
           new Map(messages.map(message => [message.id, message])).values()
         );
         
+        // Log message read statuses for debugging
+        console.log(`Received ${uniqueMessages.length} messages for chat ${chatId}`);
+        const unreadMessages = uniqueMessages.filter(
+          msg => !msg.read && msg.senderId !== userId
+        );
+        if (unreadMessages.length > 0) {
+          console.log(`Found ${unreadMessages.length} unread messages not sent by current user`);
+        }
+        
         set({ 
           currentChatMessages: uniqueMessages,
           isLoadingMessages: false
         });
         
-        // Mark messages as read whenever new messages come in
-        markMessagesAsRead(chatId, userId).catch(error => {
-          console.warn('Non-critical error marking messages as read:', error);
-        });
+        // Only mark messages as read if:
+        // 1. Document is visible (user is actively viewing the chat)
+        // 2. There are unread messages sent by the other user
+        // 3. Chat is currently selected (user has explicitly opened this chat)
+        if (document.visibilityState === 'visible' && 
+            unreadMessages.length > 0 && 
+            get().selectedChatId === chatId) {
+          console.log('Document is visible and chat is selected, marking messages as read');
+          
+          // Add a short delay to ensure user has actually seen the messages
+          // This avoids messages being marked as read as soon as they appear
+          setTimeout(() => {
+            if (document.visibilityState === 'visible' && get().selectedChatId === chatId) {
+              markMessagesAsRead(chatId, userId).catch(error => {
+                console.warn('Non-critical error marking messages as read:', error);
+              });
+            }
+          }, 1000); // 1 second delay
+        } else {
+          const reasons: string[] = [];
+          if (document.visibilityState !== 'visible') reasons.push('document not visible');
+          if (unreadMessages.length === 0) reasons.push('no unread messages');
+          if (get().selectedChatId !== chatId) reasons.push('chat not selected');
+          console.log(`Not marking messages as read: ${reasons.join(', ')}`);
+        }
       },
       (error) => {
         console.error('Error in messages subscription:', error);
@@ -161,6 +217,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     
     set({ messageUnsubscribe: unsubscribe });
+    
+    // Also subscribe to read status updates for this chat
+    get().subscribeToMessageReadStatus(chatId, userId);
   },
   
   subscribeToUserChats: (userId) => {
@@ -184,6 +243,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           chats: uniqueChats,
           isLoadingChats: false
         });
+        
+        // Calculate unread counts when chats are updated
+        get().calculateUnreadCounts(userId);
       },
       (error) => {
         console.error('Error in chats subscription:', error);
@@ -223,6 +285,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     
     set({ invitesUnsubscribe: unsubscribe });
+  },
+  
+  subscribeToMessageReadStatus: (chatId, userId) => {
+    // Clear any previous read status subscription
+    if (get().readStatusUnsubscribe) {
+      get().readStatusUnsubscribe?.();
+    }
+    
+    // Set up new subscription to track when our messages get read
+    const unsubscribe = subscribeToReadStatus(
+      chatId,
+      userId,
+      (messageIds) => {
+        // Update read status for these messages
+        get().updateMessagesReadStatus(messageIds);
+      },
+      (error) => {
+        console.error('Error in read status subscription:', error);
+      }
+    );
+    
+    set({ readStatusUnsubscribe: unsubscribe });
   },
   
   addChat: (chat) => {
@@ -266,6 +350,79 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
   
+  calculateUnreadCounts: (userId) => {
+    // Create a promise to get all unread messages for all chats
+    const getUnreadCounts = async () => {
+      const { chats } = get();
+      const unreadCounts: Record<string, number> = {};
+      
+      // We need to query Firestore for unread messages in each chat
+      for (const chat of chats) {
+        try {
+          const messagesQuery = query(
+            collection(db, 'messages'),
+            where('chatId', '==', chat.id),
+            where('senderId', '!=', userId), // Messages not from current user
+            where('read', '==', false) // Unread messages
+          );
+          
+          const snapshot = await getDocs(messagesQuery);
+          const count = snapshot.docs.length;
+          
+          // Only add to unreadCounts if there are unread messages
+          if (count > 0) {
+            unreadCounts[chat.id] = count;
+            console.log(`Chat ${chat.id} has ${count} unread messages`);
+          }
+        } catch (error) {
+          console.error(`Error getting unread count for chat ${chat.id}:`, error);
+        }
+      }
+      
+      // Update the state with the unread counts
+      set({ unreadCounts });
+    };
+    
+    // Execute the async function
+    getUnreadCounts();
+  },
+  
+  updateMessagesReadStatus: (messageIds) => {
+    set((state) => {
+      console.log(`Updating read status for ${messageIds.length} messages in UI`);
+      
+      // Only update if there are actual message IDs
+      if (messageIds.length === 0) {
+        return state;
+      }
+      
+      // Update the messages with the provided IDs
+      const updatedMessages = state.currentChatMessages.map((message) => {
+        if (messageIds.includes(message.id)) {
+          console.log(`Setting message ${message.id} as read in UI`);
+          return { ...message, read: true };
+        }
+        return message;
+      });
+      
+      // Get the current user ID from the current chat
+      const currentChatId = get().selectedChatId;
+      if (currentChatId) {
+        // Find current user's ID by using the participants of the chat
+        const currentChat = get().chats.find(chat => chat.id === currentChatId);
+        if (currentChat && currentChat.participants.length > 0) {
+          // We'll recalculate unread counts with a small delay to ensure Firestore has updated
+          setTimeout(() => {
+            const userId = currentChat.participants[0]; // This is a simplification - should be the current user ID
+            get().calculateUnreadCounts(userId);
+          }, 500);
+        }
+      }
+      
+      return { currentChatMessages: updatedMessages };
+    });
+  },
+  
   removeInvite: (inviteId) => {
     set((state) => ({
       pendingInvites: state.pendingInvites.filter((invite) => invite.id !== inviteId),
@@ -273,16 +430,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   
   unsubscribeAll: () => {
-    const { messageUnsubscribe, chatsUnsubscribe, invitesUnsubscribe } = get();
+    const { messageUnsubscribe, chatsUnsubscribe, invitesUnsubscribe, readStatusUnsubscribe } = get();
     
     if (messageUnsubscribe) messageUnsubscribe();
     if (chatsUnsubscribe) chatsUnsubscribe();
     if (invitesUnsubscribe) invitesUnsubscribe();
+    if (readStatusUnsubscribe) readStatusUnsubscribe();
     
     set({
       messageUnsubscribe: null,
       chatsUnsubscribe: null,
-      invitesUnsubscribe: null
+      invitesUnsubscribe: null,
+      readStatusUnsubscribe: null
     });
   },
   

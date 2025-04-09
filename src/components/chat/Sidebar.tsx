@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -21,10 +21,17 @@ interface SidebarProps {
 
 export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount, onCloseMobileSidebar }: SidebarProps) {
   const { user, signOut } = useAuth();
-  const { chats, selectedChatId, setSelectedChatId } = useAppStore();
+  const { chats, selectedChatId, setSelectedChatId, unreadCounts, calculateUnreadCounts } = useAppStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const router = useRouter();
   
+  // Calculate unread counts when component mounts or chats change
+  useEffect(() => {
+    if (user) {
+      calculateUnreadCounts(user.id);
+    }
+  }, [user, calculateUnreadCounts, chats.length]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -150,6 +157,9 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
               const otherParticipantId = chat.participants.find(id => id !== user?.id) || '';
               const otherParticipantInfo = chat.participantInfo[otherParticipantId] || { name: 'Unknown User' };
               
+              // Get unread count for this chat
+              const unreadCount = unreadCounts[chat.id] || 0;
+              
               return (
                 <div
                   key={chat.id}
@@ -158,15 +168,22 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                   }`}
                   onClick={() => setSelectedChatId(chat.id)}
                 >
-                  <Avatar 
-                    src={otherParticipantInfo.image}
-                    name={otherParticipantInfo.name}
-                    userId={otherParticipantId}
-                    size="md"
-                  />
+                  <div className="relative">
+                    <Avatar 
+                      src={otherParticipantInfo.image}
+                      name={otherParticipantInfo.name}
+                      userId={otherParticipantId}
+                      size="md"
+                    />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex justify-between items-baseline">
-                      <p className="font-medium text-gray-900 truncate">
+                      <p className={`font-medium truncate ${unreadCount > 0 ? 'text-black font-semibold' : 'text-gray-900'}`}>
                         {otherParticipantInfo.name}
                       </p>
                       <p className="text-xs text-gray-700">
@@ -174,7 +191,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                       </p>
                     </div>
                     {chat.lastMessage && (
-                      <p className="text-sm text-gray-600 truncate">
+                      <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
                         {chat.lastMessage.senderId === user?.id ? 'You: ' : ''}
                         {chat.lastMessage.type === 'text' 
                           ? truncateText(chat.lastMessage.content, 30) 
