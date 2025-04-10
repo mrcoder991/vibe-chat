@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 type LoginInputs = {
   email: string;
@@ -20,16 +21,33 @@ type LoginInputs = {
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
+  const { user, loading } = useAuth();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginInputs>({
     defaultValues: {
-      rememberMe: true // Default to remember the user
+      rememberMe: true
     }
   });
+  
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/chat');
+      router.replace('/chat'); // Replace history so back button won't work
+    }
+  }, [user, loading, router]);
+
+  // Don't render form while checking auth state
+  if (loading || user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   const onSubmit: SubmitHandler<LoginInputs> = async (data) => {
     setIsLoading(true);
@@ -46,14 +64,18 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast.success('Successfully logged in!');
       router.push('/chat');
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        toast.error('Invalid email or password');
-      } else if (error.code === 'auth/too-many-requests') {
-        toast.error('Too many failed login attempts, please try again later');
-      } else {
-        toast.error('Failed to login. Please try again.');
-        console.error(error);
+      router.replace('/chat'); // Replace history so back button won't work
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        const { code } = error as { code?: string };
+        if (code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+          toast.error('Invalid email or password');
+        } else if (code === 'auth/too-many-requests') {
+          toast.error('Too many failed login attempts, please try again later');
+        } else {
+          toast.error('Failed to login. Please try again.');
+          console.error(error);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -146,4 +168,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/lib/auth';
 
 type SignupInputs = {
   name: string;
@@ -21,15 +22,32 @@ type SignupInputs = {
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
+  const { user, loading } = useAuth();
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
   } = useForm<SignupInputs>();
-
+  
   const password = watch('password');
+  
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/chat');
+      router.replace('/chat'); // Replace history so back button won't work
+    }
+  }, [user, loading, router]);
+
+  // Don't render form while checking auth state
+  if (loading || user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   const onSubmit: SubmitHandler<SignupInputs> = async (data) => {
     setIsLoading(true);
@@ -55,19 +73,20 @@ export default function SignupPage() {
       
       toast.success('Account created successfully!');
       
-      // Small delay to ensure Firebase processes the profile update
-      // before redirecting to the chat page
-      setTimeout(() => {
-        router.push('/chat');
-      }, 1000);
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        toast.error('Email already in use. Please use a different email or login.');
-      } else if (error.code === 'auth/weak-password') {
-        toast.error('Password is too weak. Please use a stronger password.');
-      } else {
-        toast.error('Failed to create account. Please try again.');
-        console.error(error);
+      // Redirect immediately without delay
+      router.push('/chat');
+      router.replace('/chat'); // Replace history so back button won't work
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        const { code } = error as { code?: string };
+        if (code === 'auth/email-already-in-use') {
+          toast.error('Email already in use. Please use a different email or login.');
+        } else if (code === 'auth/weak-password') {
+          toast.error('Password is too weak. Please use a stronger password.');
+        } else {
+          toast.error('Failed to create account. Please try again.');
+          console.error(error);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -170,4 +189,4 @@ export default function SignupPage() {
       </div>
     </div>
   );
-} 
+}
