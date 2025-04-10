@@ -84,19 +84,14 @@ export default function ChatArea() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && selectedChatId && user) {
-        console.log('Tab/window became visible - will mark messages as read after delay');
-        
         // Add a small delay to make sure the user is actually looking at the chat
         // and not just switching between tabs briefly
         setTimeout(() => {
           // Check again if document is still visible and chat is still selected
           if (document.visibilityState === 'visible' && selectedChatId) {
-            console.log('Marking messages as read after visibility change');
             markMessagesAsRead(selectedChatId, user.id).catch(error => {
               console.warn('Non-critical error marking messages as read on visibility change:', error);
             });
-          } else {
-            console.log('Visibility conditions no longer met - not marking messages as read');
           }
         }, 2000); // 2 second delay to ensure user is actually looking at the chat
       }
@@ -106,12 +101,9 @@ export default function ChatArea() {
     
     // Initial check when component mounts - only mark as read after a delay
     if (document.visibilityState === 'visible' && selectedChatId && user) {
-      console.log('Initial visibility check - will mark messages as read after delay');
-      
       // Add a delay to ensure user has time to actually look at the messages
       setTimeout(() => {
         if (document.visibilityState === 'visible' && selectedChatId) {
-          console.log('Marking messages as read on initial load after delay');
           markMessagesAsRead(selectedChatId, user.id).catch(error => {
             console.warn('Non-critical error marking messages as read on initial load:', error);
           });

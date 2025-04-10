@@ -170,14 +170,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           new Map(messages.map(message => [message.id, message])).values()
         );
         
-        // Log message read statuses for debugging
-        console.log(`Received ${uniqueMessages.length} messages for chat ${chatId}`);
+        // Find unread messages not sent by current user
         const unreadMessages = uniqueMessages.filter(
           msg => !msg.read && msg.senderId !== userId
         );
-        if (unreadMessages.length > 0) {
-          console.log(`Found ${unreadMessages.length} unread messages not sent by current user`);
-        }
         
         set({ 
           currentChatMessages: uniqueMessages,
@@ -191,7 +187,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (document.visibilityState === 'visible' && 
             unreadMessages.length > 0 && 
             get().selectedChatId === chatId) {
-          console.log('Document is visible and chat is selected, marking messages as read');
           
           // Add a short delay to ensure user has actually seen the messages
           // This avoids messages being marked as read as soon as they appear
@@ -202,12 +197,6 @@ export const useAppStore = create<AppState>((set, get) => ({
               });
             }
           }, 1000); // 1 second delay
-        } else {
-          const reasons: string[] = [];
-          if (document.visibilityState !== 'visible') reasons.push('document not visible');
-          if (unreadMessages.length === 0) reasons.push('no unread messages');
-          if (get().selectedChatId !== chatId) reasons.push('chat not selected');
-          console.log(`Not marking messages as read: ${reasons.join(', ')}`);
         }
       },
       (error) => {
@@ -370,14 +359,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           const snapshot = await getDocs(messagesQuery);
           const count = snapshot.docs.length;
           
-          // Detailed logging for debugging
+          // Only add to unreadCounts if there are unread messages
           if (count > 0) {
-            console.log(`Chat ${chat.id} has ${count} unread messages from others`);
-            // Log each unread message for debugging
-            snapshot.docs.forEach(doc => {
-              const message = doc.data();
-              console.log(`Unread message found - ID: ${doc.id}, Sender: ${message.senderId}, Content: ${message.content?.substring(0, 30)}${message.content?.length > 30 ? '...' : ''}`);
-            });
             unreadCounts[chat.id] = count;
           }
         } catch (error) {
@@ -395,8 +378,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   updateMessagesReadStatus: (messageIds) => {
     set((state) => {
-      console.log(`Updating read status for ${messageIds.length} messages in UI`);
-      
       // Only update if there are actual message IDs
       if (messageIds.length === 0) {
         return state;
@@ -405,7 +386,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Update the messages with the provided IDs
       const updatedMessages = state.currentChatMessages.map((message) => {
         if (messageIds.includes(message.id)) {
-          console.log(`Setting message ${message.id} as read in UI`);
           return { ...message, read: true };
         }
         return message;
