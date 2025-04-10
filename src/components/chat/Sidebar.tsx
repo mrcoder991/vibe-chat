@@ -160,6 +160,12 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
               // Get unread count for this chat
               const unreadCount = unreadCounts[chat.id] || 0;
               
+              // Don't show unread count for messages sent by the current user
+              // Only show for messages received from others that are unread
+              const shouldShowUnreadBadge = unreadCount > 0 && (
+                chat.lastMessage?.senderId !== user?.id // Only show if last message was not sent by current user
+              );
+              
               return (
                 <div
                   key={chat.id}
@@ -175,7 +181,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                       userId={otherParticipantId}
                       size="md"
                     />
-                    {unreadCount > 0 && (
+                    {shouldShowUnreadBadge && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {unreadCount}
                       </span>
@@ -183,7 +189,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex justify-between items-baseline">
-                      <p className={`font-medium truncate ${unreadCount > 0 ? 'text-black font-semibold' : 'text-gray-900'}`}>
+                      <p className={`font-medium truncate ${shouldShowUnreadBadge ? 'text-black font-semibold' : 'text-gray-900'}`}>
                         {otherParticipantInfo.name}
                       </p>
                       <p className="text-xs text-gray-700">
@@ -191,7 +197,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                       </p>
                     </div>
                     {chat.lastMessage && (
-                      <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+                      <p className={`text-sm truncate ${shouldShowUnreadBadge ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
                         {chat.lastMessage.senderId === user?.id ? 'You: ' : ''}
                         {chat.lastMessage.type === 'text' 
                           ? truncateText(chat.lastMessage.content, 30) 

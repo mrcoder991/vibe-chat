@@ -615,6 +615,9 @@ export const markMessagesAsRead = async (
       return false;
     }
     
+    // Log the chat participants for debugging
+    console.log(`Chat participants: ${chatData.participants.join(', ')}`);
+    
     // Get unread messages sent by others (not by the current user)
     const messagesQuery = query(
       collection(db, 'messages'),
@@ -626,6 +629,24 @@ export const markMessagesAsRead = async (
     
     if (messagesSnapshot.empty) {
       console.log("No unread messages to mark as read");
+      
+      // For debugging: Let's also check if there are any messages at all in this chat
+      const allMessagesQuery = query(
+        collection(db, 'messages'),
+        where('chatId', '==', chatId)
+      );
+      const allMessagesSnapshot = await getDocs(allMessagesQuery);
+      console.log(`Total message count in chat: ${allMessagesSnapshot.docs.length}`);
+      
+      // Log details about each message in the chat for debugging
+      if (allMessagesSnapshot.docs.length > 0) {
+        console.log("Messages in this chat:");
+        allMessagesSnapshot.docs.forEach(doc => {
+          const message = doc.data();
+          console.log(`- ID: ${doc.id}, Sender: ${message.senderId}, Read: ${message.read}, Content: ${message.content?.substring(0, 30)}${message.content?.length > 30 ? '...' : ''}`);
+        });
+      }
+      
       return true; // No messages to mark as read
     }
     

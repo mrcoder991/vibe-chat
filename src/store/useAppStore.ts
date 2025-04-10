@@ -359,20 +359,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       // We need to query Firestore for unread messages in each chat
       for (const chat of chats) {
         try {
+          // Query for messages RECEIVED by the current user that they haven't read yet
           const messagesQuery = query(
             collection(db, 'messages'),
             where('chatId', '==', chat.id),
-            where('senderId', '!=', userId), // Messages not from current user
-            where('read', '==', false) // Unread messages
+            where('senderId', '!=', userId), // Messages FROM others (not from current user)
+            where('read', '==', false) // Unread by the current user
           );
           
           const snapshot = await getDocs(messagesQuery);
           const count = snapshot.docs.length;
           
-          // Only add to unreadCounts if there are unread messages
+          // Detailed logging for debugging
           if (count > 0) {
+            console.log(`Chat ${chat.id} has ${count} unread messages from others`);
+            // Log each unread message for debugging
+            snapshot.docs.forEach(doc => {
+              const message = doc.data();
+              console.log(`Unread message found - ID: ${doc.id}, Sender: ${message.senderId}, Content: ${message.content?.substring(0, 30)}${message.content?.length > 30 ? '...' : ''}`);
+            });
             unreadCounts[chat.id] = count;
-            console.log(`Chat ${chat.id} has ${count} unread messages`);
           }
         } catch (error) {
           console.error(`Error getting unread count for chat ${chat.id}:`, error);
