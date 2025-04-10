@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon, UserIcon } from '@heroicons/react/24/outline';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 type SignupInputs = {
   name: string;
