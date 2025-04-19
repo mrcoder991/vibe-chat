@@ -67,18 +67,18 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
   };
 
   return (
-    <div className="w-full h-full border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-full h-full border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center">
-          <Link href="/" className="text-blue-600 font-bold text-xl">VibeChat</Link>
+          <Link href="/" className="text-blue-600 dark:text-blue-400 font-bold text-xl">VibeChat</Link>
         </div>
         <div className="flex items-center">
           {/* Mobile close button */}
           {onCloseMobileSidebar && (
             <button 
               onClick={onCloseMobileSidebar}
-              className="md:hidden p-2 mr-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              className="md:hidden p-2 mr-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
               aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
@@ -100,15 +100,15 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
             
             {/* User menu */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                <div className="py-2 px-4 border-b border-gray-200">
-                  <p className="font-medium">{user?.name}</p>
-                  <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+                <div className="py-2 px-4 border-b border-gray-200 dark:border-gray-700">
+                  <p className="font-medium dark:text-white">{user?.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                 </div>
                 <div className="py-1">
                   <button 
                     onClick={handleSignOut}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
                   >
                     <LogOutIcon className="h-4 w-4 mr-2" />
                     Sign out
@@ -121,17 +121,17 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
       </div>
       
       {/* Actions */}
-      <div className="p-3 border-b border-gray-200 flex space-x-2">
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex space-x-2">
         <button
           onClick={onNewChat}
-          className="flex-1 flex items-center justify-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+          className="flex-1 flex items-center justify-center bg-blue-600 dark:bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
         >
           <PlusIcon className="h-4 w-4 mr-2" />
           New Chat
         </button>
         <button
           onClick={onShowInvites}
-          className="relative flex items-center justify-center bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors"
+          className="relative flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
           <BellIcon className="h-5 w-5" />
           {pendingInvitesCount > 0 && (
@@ -146,12 +146,12 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
       {/* Chat list */}
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (
-          <div className="p-4 text-center text-gray-600">
+          <div className="p-4 text-center text-gray-600 dark:text-gray-400">
             <p>No conversations yet.</p>
             <p className="text-sm">Start a new chat to begin messaging.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {chats.map((chat) => {
               // Find the other participant (not the current user)
               const otherParticipantId = chat.participants.find(id => id !== user?.id) || '';
@@ -169,8 +169,8 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
               return (
                 <div
                   key={chat.id}
-                  className={`p-3 hover:bg-gray-50 cursor-pointer flex items-center ${
-                    selectedChatId === chat.id ? 'bg-blue-50' : ''
+                  className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center ${
+                    selectedChatId === chat.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                   }`}
                   onClick={() => setSelectedChatId(chat.id)}
                 >
@@ -189,25 +189,23 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex justify-between items-baseline">
-                      <p className={`font-medium truncate ${shouldShowUnreadBadge ? 'text-black font-semibold' : 'text-gray-900'}`}>
+                      <p className={`font-medium truncate ${shouldShowUnreadBadge ? 'text-black dark:text-white font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
                         {otherParticipantInfo.name}
                       </p>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-xs text-gray-700 dark:text-gray-400">
                         {formatTimestamp(chat.updatedAt)}
                       </p>
                     </div>
                     {chat.lastMessage && (
-                      <p className={`text-sm truncate ${shouldShowUnreadBadge ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
-                        {chat.lastMessage.senderId === user?.id ? 'You: ' : ''}
-                        {chat.lastMessage.type === 'text' 
-                          ? truncateText(chat.lastMessage.content, 30) 
-                          : 'Sent an image'}
+                      <p className={`text-sm truncate ${shouldShowUnreadBadge ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+                        {chat.lastMessage.type === 'image' ? '🌄 Photo' : truncateText(chat.lastMessage.content, 40)}
                       </p>
                     )}
                   </div>
                   <button
                     onClick={(e) => handleDeleteChat(chat.id, e)}
-                    className="ml-2 text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ml-2 opacity-0 group-hover:opacity-100"
+                    aria-label="Delete chat"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -219,23 +217,23 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
       </div>
       
       {/* User ID section */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <div className="flex justify-between items-center mb-1">
-          <p className="text-sm font-medium text-gray-700">Your User ID</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Your User ID</p>
           <button
             onClick={() => {
               navigator.clipboard.writeText(user?.id || '');
               toast.success('User ID copied to clipboard!');
             }}
-            className="text-xs text-blue-600 hover:text-blue-800"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
           >
             Copy
           </button>
         </div>
-        <p className="text-xs text-gray-600 break-all bg-white p-2 rounded border border-gray-200">
+        <p className="text-xs text-gray-600 dark:text-gray-400 break-all bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
           {user?.id}
         </p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
           Share this ID with friends to let them connect with you.
         </p>
       </div>

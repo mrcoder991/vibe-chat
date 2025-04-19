@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/store/useAppStore";
 import Avatar from "@/components/ui/Avatar";
-import { formatMessageTime } from "@/lib/utils";
 import {
   deleteMessage,
   sendImageMessage,
@@ -16,16 +15,15 @@ import {
   SendIcon,
   XIcon,
   ReplyIcon,
-  TrashIcon,
   Menu,
-  CheckIcon,
-  CheckCheckIcon,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Message } from "@/types";
 import Image from "next/image";
 import ImageModal from "../ui/ImageModal";
 import { Timestamp } from "firebase/firestore";
+import ThemeToggle from "../ui/ThemeToggle";
+import MessageBubble from "../ui/MessageBubble";
 
 export default function ChatArea() {
   const { user } = useAuth();
@@ -49,6 +47,8 @@ export default function ChatArea() {
   );
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartTimeRef = useRef<number>(0);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isLoadingMore = false; // Using a constant instead of state since it's not being updated
 
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
 
@@ -340,305 +340,74 @@ export default function ChatArea() {
   return (
     <div className="flex flex-col h-full">
       {/* Chat header */}
-      <div className="p-3 border-b border-gray-200 bg-white flex items-center">
-        <button
-          onClick={() =>
-            document.dispatchEvent(new CustomEvent("toggle-sidebar"))
-          }
-          className="md:hidden mr-3 p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Avatar
-          src={otherParticipantInfo.image}
-          name={otherParticipantInfo.name}
-          userId={otherParticipantId}
-          size="md"
-        />
-        <div className="ml-3">
-          <p className="font-medium">{otherParticipantInfo.name}</p>
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center justify-between">
+        <div className="flex items-center">
+          <button
+            onClick={() =>
+              document.dispatchEvent(new CustomEvent("toggle-sidebar"))
+            }
+            className="md:hidden mr-3 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Avatar
+            src={otherParticipantInfo.image}
+            name={otherParticipantInfo.name}
+            userId={otherParticipantId}
+            size="md"
+          />
+          <div className="ml-3">
+            <p className="font-medium dark:text-white">{otherParticipantInfo.name}</p>
+          </div>
         </div>
+        <ThemeToggle />
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-4 p-2 bg-gray-50">
+      {/* Messages area with virtualization */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-4 md:p-4 p-2 bg-gray-50 dark:bg-gray-900 relative"
+      >
         {currentChatMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-600">
+          <div className="flex items-center justify-center h-full text-gray-600 dark:text-gray-400">
             <p>No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* Filter out duplicate messages by creating a new array with unique message IDs */}
-            {Array.from(
-              new Map(
-                currentChatMessages.map((message) => [message.id, message])
-              ).values()
-            ).map((message) => {
-              const isOwnMessage = message.senderId === user.id;
-              const senderInfo = isOwnMessage
-                ? { name: user.name, image: user.image }
-                : selectedChat.participantInfo[message.senderId] || {
-                    name: "Unknown User",
-                  };
-
-              const isMessageSelected = selectedMessageId === message.id;
-
-              return (
-                <div
+          <>
+            {/* Loading indicator at the top */}
+            {isLoadingMore && (
+              <div className="flex justify-center py-4 sticky top-0">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 dark:border-blue-400"></div>
+              </div>
+            )}
+            
+            <div className="space-y-3">
+              {currentChatMessages.map((message) => (
+                <MessageBubble
                   key={message.id}
-                  className={`flex ${
-                    isOwnMessage ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`flex ${
-                      isOwnMessage ? "flex-row-reverse" : "flex-row"
-                    } max-w-[90%] md:max-w-[80%] group relative`}
-                    onTouchStart={() => handleTouchStart(message.id)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchMove}
-                    onClick={(e) => e.stopPropagation()}
-                    onContextMenu={(e) => e.preventDefault()}
-                  >
-                    <div
-                      className={`flex-shrink-0 ${
-                        isOwnMessage ? "ml-2" : "mr-2"
-                      } self-end hidden sm:block`}
-                    >
-                      <Avatar
-                        src={senderInfo.image}
-                        name={senderInfo.name}
-                        userId={message.senderId}
-                        size="sm"
-                      />
-                    </div>
-                    <div
-                      className={`
-                        ${
-                          isOwnMessage
-                            ? "bg-blue-600 text-white rounded-tl-lg rounded-tr-sm rounded-bl-lg rounded-br-lg"
-                            : "bg-white text-gray-800 rounded-tl-sm rounded-tr-lg rounded-bl-lg rounded-br-lg"
+                  message={message}
+                  isOwnMessage={message.senderId === user.id}
+                  senderInfo={
+                    message.senderId === user.id
+                      ? { name: user.name, image: user.image }
+                      : selectedChat.participantInfo[message.senderId] || {
+                          name: "Unknown User",
                         }
-                        p-3 shadow-sm
-                      `}
-                    >
-                      {/* Reply reference if exists */}
-                      {message.replyTo && (
-                        <div
-                          className={`
-                            mb-2 pt-1 pb-1 pr-2 pl-2 border-l-4 rounded
-                            ${
-                              isOwnMessage
-                                ? "border-blue-300"
-                                : "border-gray-300"
-                            }
-                            ${
-                              isOwnMessage
-                                ? "bg-blue-700"
-                                : "bg-gray-100"
-                            }
-                          `}
-                        >
-                          <div
-                            className={`font-medium text-xs ${
-                              isOwnMessage ? "text-blue-200" : "text-gray-600"
-                            } select-none`}
-                          >
-                            {message.replyTo.senderId === user.id
-                              ? "You"
-                              : selectedChat.participantInfo[
-                                  message.replyTo.senderId
-                                ]?.name || "Unknown User"}
-                          </div>
-                          {message.replyTo.type === "image" ||
-                          (message.replyTo.content &&
-                            message.replyTo.content.startsWith(
-                              "https://ik.imagekit.io/"
-                            )) ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                                <Image
-                                  src={message.replyTo.content}
-                                  alt="Photo"
-                                  width={32}
-                                  height={32}
-                                  className="object-cover w-full h-full"
-                                  onError={(e) => {
-                                    // Replace with placeholder on error
-                                    const target = e.target as HTMLImageElement;
-                                    target.src =
-                                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E';
-                                  }}
-                                />
-                              </div>
-                              <span
-                                className={`text-xs ${
-                                  isOwnMessage
-                                    ? "text-blue-100"
-                                    : "text-gray-500"
-                                } select-none`}
-                              >
-                                Photo
-                              </span>
-                            </div>
-                          ) : (
-                            <div
-                              className={`text-xs ${
-                                isOwnMessage ? "text-blue-100" : "text-gray-500"
-                              } line-clamp-3 select-none`}
-                            >
-                              {message.replyTo.content}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Message content */}
-                      {message.type === "text" ? (
-                        <p className="whitespace-pre-wrap break-words">
-                          {message.deleted ? (
-                            <span className="italic opacity-70">
-                              {message.content}
-                            </span>
-                          ) : (
-                            message.content
-                          )}
-                        </p>
-                      ) : message.deleted ? (
-                        <span className="italic opacity-70 select-none">
-                          This image was deleted
-                        </span>
-                      ) : (
-                        <div
-                          className={`
-                            rounded-md overflow-hidden 
-                            ${isOwnMessage ? "bg-blue-700" : "bg-gray-100"} 
-                            p-1 max-w-[240px]
-                          `}
-                        >
-                          <div className="relative aspect-auto">
-                            <Image
-                              src={message.content}
-                              alt="Message image"
-                              className="object-contain rounded-md w-full h-auto cursor-pointer"
-                              width={240}
-                              height={180}
-                              priority
-                              onClick={() => handleImageClick(message.content)}
-                              onContextMenu={(e) => e.preventDefault()}
-                              onError={(e) => {
-                                console.error("Error loading image:", e);
-                                // Replace with error placeholder
-                                const target = e.target as HTMLImageElement;
-                                target.src =
-                                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E';
-                                // Add padding and styling for error state
-                                target.parentElement?.classList.add(
-                                  "p-8",
-                                  "flex",
-                                  "justify-center",
-                                  "items-center",
-                                  "bg-gray-200"
-                                );
-                                // Add error message below
-                                const errorMsg = document.createElement("div");
-                                errorMsg.innerText = "Image failed to load";
-                                errorMsg.className =
-                                  "text-xs text-red-500 text-center mt-1";
-                                target.parentElement?.parentElement?.appendChild(
-                                  errorMsg
-                                );
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Message time and read receipt */}
-                      <div
-                        className={`
-                          text-xs mt-1 flex items-center space-x-1 justify-end
-                          ${isOwnMessage ? "text-blue-100" : "text-gray-600"}
-                        `}
-                      >
-                        <span className="select-none">{formatMessageTime(message.timestamp)}</span>
-                        {isOwnMessage && (
-                          <span
-                            className="ml-1 flex items-center transition-opacity"
-                            title={message.read ? "Read" : "Delivered"}
-                            onClick={() =>
-                              console.log(
-                                `Message ${message.id} read status: ${
-                                  message.read ? "Read" : "Unread"
-                                }`
-                              )
-                            }
-                          >
-                            {message.read ? (
-                              <CheckCheckIcon
-                                className="h-4 w-4 text-green-300"
-                                aria-label="Read"
-                              />
-                            ) : (
-                              <CheckIcon
-                                className="h-4 w-4 text-blue-200 opacity-70"
-                                aria-label="Delivered"
-                              />
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Message actions - now visible on hover AND when selected */}
-                    {!message.deleted && (
-                      <div
-                        className={`
-                          flex items-end transition-opacity mb-2 sm:mb-0
-                          ${isOwnMessage ? "mr-2" : "ml-2"}
-                          ${
-                            isMessageSelected
-                              ? "opacity-100"
-                              : "opacity-0 group-hover:opacity-100"
-                          }
-                        `}
-                      >
-                        <div className="bg-white rounded-full shadow p-1 flex flex-row sm:flex-col space-x-1 sm:space-x-0 sm:space-y-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setReplyingTo(message);
-                              setSelectedMessageId(null);
-                            }}
-                            className="p-1 sm:p-1 md:p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100"
-                            aria-label="Reply to message"
-                          >
-                            <ReplyIcon className="h-5 w-5 sm:h-4 sm:w-4" />
-                          </button>
-
-                          {isOwnMessage && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMessage(message);
-                                setSelectedMessageId(null);
-                              }}
-                              className="p-1 sm:p-1 md:p-1 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 mt-0 sm:mt-1"
-                              aria-label="Delete message"
-                            >
-                              <TrashIcon className="h-5 w-5 sm:h-4 sm:w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+                  }
+                  selectedMessageId={selectedMessageId}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchMove}
+                  onSetReplyingTo={setReplyingTo}
+                  onDelete={handleDeleteMessage}
+                  onImageClick={handleImageClick}
+                  chatParticipantInfo={selectedChat.participantInfo}
+                />
+              ))}
+              <div ref={messagesEndRef} style={{ height: 20 }} />
+            </div>
+          </>
         )}
       </div>
 
@@ -653,10 +422,10 @@ export default function ChatArea() {
 
       {/* Reply indicator */}
       {replyingTo && (
-        <div className="bg-gray-100 p-2 border-t border-gray-200 flex items-center">
-          <div className="flex-1 flex bg-gray-200 h-full rounded">
+        <div className="bg-gray-100 dark:bg-gray-800 p-2 border-t border-gray-200 dark:border-gray-700 flex items-center">
+          <div className="flex-1 flex bg-gray-200 dark:bg-gray-700 h-full rounded">
             <div className="pl-2 rounded border-l-4 border-blue-500 flex-1">
-              <div className="flex items-center text-blue-600 font-medium text-sm">
+              <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium text-sm">
                 <ReplyIcon className="h-4 w-4 mr-2 flex-shrink-0" />
                 {replyingTo.senderId === user.id
                   ? "You"
@@ -667,10 +436,10 @@ export default function ChatArea() {
               (replyingTo.content &&
                 replyingTo.content.startsWith("https://ik.imagekit.io/")) ? (
                 <div className="flex items-center justify-between gap-2 mt-1 w-full">
-                  <span className="text-gray-500 text-sm">🌃 Photo</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">🌃 Photo</span>
                 </div>
               ) : (
-                <div className="text-gray-500 text-sm line-clamp-3 pr-4">
+                <div className="text-gray-500 dark:text-gray-400 text-sm line-clamp-3 pr-4">
                   {replyingTo.content}
                 </div>
               )}
@@ -679,7 +448,7 @@ export default function ChatArea() {
           {replyingTo.type === "image" ||
           (replyingTo.content &&
             replyingTo.content.startsWith("https://ik.imagekit.io/")) ? (
-            <div className="w-15 h-15 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+            <div className="w-15 h-15 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0">
               <Image
                 src={replyingTo.content}
                 alt="Photo"
@@ -697,7 +466,7 @@ export default function ChatArea() {
           ) : null}
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1 text-gray-600 hover:text-gray-800 rounded-full hover:bg-gray-200 flex-shrink-0 ml-2"
+            className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 ml-2"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -705,10 +474,10 @@ export default function ChatArea() {
       )}
 
       {/* Input area */}
-      <div className="p-3 border-t border-gray-200 bg-white flex items-end">
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-end">
         <button
           onClick={triggerFileInput}
-          className="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 mr-2 flex-shrink-0"
+          className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 mr-2 flex-shrink-0"
           aria-label="Send image"
         >
           <ImageIcon className="h-5 w-5" />
@@ -726,7 +495,7 @@ export default function ChatArea() {
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder:text-gray-600 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-gray-800"
             rows={1}
             style={{ minHeight: "42px", maxHeight: "120px" }}
           />
@@ -736,8 +505,8 @@ export default function ChatArea() {
           disabled={(!messageInput.trim() && !replyingTo) || isSubmitting}
           className={`ml-2 p-2 rounded-full flex-shrink-0 ${
             (!messageInput.trim() && !replyingTo) || isSubmitting
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
+              ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+              : "bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800"
           }`}
           aria-label="Send message"
         >
