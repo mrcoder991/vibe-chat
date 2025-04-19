@@ -438,7 +438,7 @@ export default function ChatArea() {
                           <div
                             className={`font-medium text-xs ${
                               isOwnMessage ? "text-blue-200" : "text-gray-600"
-                            }`}
+                            } select-none`}
                           >
                             {message.replyTo.senderId === user.id
                               ? "You"
@@ -472,7 +472,7 @@ export default function ChatArea() {
                                   isOwnMessage
                                     ? "text-blue-100"
                                     : "text-gray-500"
-                                }`}
+                                } select-none`}
                               >
                                 Photo
                               </span>
@@ -481,7 +481,7 @@ export default function ChatArea() {
                             <div
                               className={`text-xs ${
                                 isOwnMessage ? "text-blue-100" : "text-gray-500"
-                              } line-clamp-3`}
+                              } line-clamp-3 select-none`}
                             >
                               {message.replyTo.content}
                             </div>
@@ -501,7 +501,7 @@ export default function ChatArea() {
                           )}
                         </p>
                       ) : message.deleted ? (
-                        <span className="italic opacity-70">
+                        <span className="italic opacity-70 select-none">
                           This image was deleted
                         </span>
                       ) : (
@@ -557,7 +557,7 @@ export default function ChatArea() {
                           ${isOwnMessage ? "text-blue-100" : "text-gray-600"}
                         `}
                       >
-                        <span>{formatMessageTime(message.timestamp)}</span>
+                        <span className="select-none">{formatMessageTime(message.timestamp)}</span>
                         {isOwnMessage && (
                           <span
                             className="ml-1 flex items-center transition-opacity"
