@@ -104,11 +104,11 @@ export default function ChatPage() {
         {selectedChatId ? (
           <ChatArea />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white">
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900">
+            <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-blue-500"
+                className="h-12 w-12 text-blue-500 dark:text-blue-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -121,15 +121,15 @@ export default function ChatPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Welcome to VibeChat!</h2>
-            <p className="text-gray-600 text-center max-w-md mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Welcome to VibeChat!</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-center max-w-md mb-6">
               {chats.length > 0
                 ? 'Select a chat from the sidebar or start a new conversation.'
                 : 'Start a new conversation by clicking the "New Chat" button.'}
             </p>
             <button
               onClick={() => setIsNewChatOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
             >
               New Chat
             </button>
