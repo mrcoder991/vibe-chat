@@ -427,11 +427,16 @@ export default function ChatArea() {
                       {message.replyTo && (
                         <div
                           className={`
-                            mb-2 pl-2 border-l-4 rounded
+                            mb-2 pt-1 pb-1 pr-2 pl-2 border-l-4 rounded
                             ${
                               isOwnMessage
                                 ? "border-blue-300"
                                 : "border-gray-300"
+                            }
+                            ${
+                              isOwnMessage
+                                ? "bg-blue-700"
+                                : "bg-gray-100"
                             }
                           `}
                         >
