@@ -227,7 +227,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
           <span className="text-sm font-medium">Settings</span>
         </button>
         {showSettings && (
-          <div className="absolute bottom-full left-0 mb-2 w-full md:w-80 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 z-50 rounded-md max-h-[60vh] overflow-y-auto">
+          <div className="absolute bottom-full left-0 mb-2 w-full md:w-80 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 z-50 rounded-md">
             <div className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-medium text-gray-900 dark:text-white">Settings</h3>
