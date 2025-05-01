@@ -7,10 +7,11 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppStore } from '@/store/useAppStore';
 import Avatar from '@/components/ui/Avatar';
 import { formatTimestamp, truncateText } from '@/lib/utils';
-import { PlusIcon, BellIcon, LogOutIcon, TrashIcon, X } from 'lucide-react';
+import { PlusIcon, BellIcon, LogOutIcon, TrashIcon, X, Settings } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deleteChat } from '@/lib/firebaseUtils';
 import NotificationToggle from '@/components/ui/NotificationToggle';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 interface SidebarProps {
   onNewChat: () => void;
@@ -23,6 +24,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
   const { user, signOut } = useAuth();
   const { chats, selectedChatId, setSelectedChatId, unreadCounts, calculateUnreadCounts } = useAppStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const router = useRouter();
   
   // Calculate unread counts when component mounts or chats change
@@ -73,7 +75,7 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
         <div className="flex items-center">
           <Link href="/" className="text-blue-600 dark:text-blue-400 font-bold text-xl">VibeChat</Link>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center space-x-2">
           {/* Mobile close button */}
           {onCloseMobileSidebar && (
             <button 
@@ -140,7 +142,6 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
             </span>
           )}
         </button>
-        <NotificationToggle />
       </div>
       
       {/* Chat list */}
@@ -212,6 +213,48 @@ export default function Sidebar({ onNewChat, onShowInvites, pendingInvitesCount,
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+      
+      {/* Settings button */}
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center justify-between relative">
+        <button 
+          onClick={() => setShowSettings(!showSettings)}
+          className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+        >
+          <Settings className="h-5 w-5" />
+          <span className="text-sm font-medium">Settings</span>
+        </button>
+        {showSettings && (
+          <div className="absolute bottom-full left-0 mb-2 w-full md:w-80 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 z-50 rounded-md max-h-[60vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-medium text-gray-900 dark:text-white">Settings</h3>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+                  <ThemeToggle />
+                </div>
+                
+                {/* Notifications Settings */}
+                <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Notifications</span>
+                  <NotificationToggle />
+                </div>
+                
+                {/* We can add more settings here in the future */}
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -17,14 +17,15 @@ import {
   XIcon,
   ReplyIcon,
   Menu,
+  Trash2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Message } from "@/types";
 import Image from "next/image";
 import ImageModal from "../ui/ImageModal";
 import ConfirmModal from "../ui/ConfirmModal";
+import MenuDropdown from "../ui/MenuDropdown";
 import { Timestamp } from "firebase/firestore";
-import ThemeToggle from "../ui/ThemeToggle";
 import MessageBubble from "../ui/MessageBubble";
 import { isToday, isYesterday, format } from "date-fns";
 
@@ -428,19 +429,19 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleDeleteChat}
-            className="p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
-            aria-label="Delete all messages"
+          <MenuDropdown 
+            items={[
+              {
+                label: "Delete all messages", 
+                icon: <Trash2 className="h-4 w-4" />,
+                onClick: handleDeleteChat,
+                isDestructive: true,
+                disabled: isSubmitting
+              }
+              // Add more menu items here in the future
+            ]} 
             disabled={isSubmitting}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-            </svg>
-          </button>
-          <ThemeToggle />
+          />
         </div>
       </div>
 
