@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/store/useAppStore";
 import Avatar from "@/components/ui/Avatar";
@@ -9,6 +9,7 @@ import {
   sendImageMessage,
   sendTextMessage,
   markMessagesAsRead,
+  deleteAllChatMessages,
 } from "@/lib/firebaseUtils";
 import {
   ImageIcon,
@@ -21,9 +22,26 @@ import { toast } from "react-hot-toast";
 import { Message } from "@/types";
 import Image from "next/image";
 import ImageModal from "../ui/ImageModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { Timestamp } from "firebase/firestore";
 import ThemeToggle from "../ui/ThemeToggle";
 import MessageBubble from "../ui/MessageBubble";
+import { isToday, isYesterday, format } from "date-fns";
+
+// Helper function to format message date for grouping
+const formatMessageDate = (timestamp: Timestamp | null | undefined) => {
+  if (!timestamp) return "Unknown Date";
+  
+  try {
+    const date = timestamp.toDate();
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "MMMM d, yyyy");
+  } catch (error) {
+    console.warn("Error formatting date:", error);
+    return "Unknown Date";
+  }
+};
 
 export default function ChatArea() {
   const { user } = useAuth();
@@ -36,6 +54,7 @@ export default function ChatArea() {
     setReplyingTo,
     addMessage,
     updateMessage,
+    clearCurrentChatMessages,
   } = useAppStore();
   const [messageInput, setMessageInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,6 +68,9 @@ export default function ChatArea() {
   const touchStartTimeRef = useRef<number>(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isLoadingMore = false; // Using a constant instead of state since it's not being updated
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
 
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
 
@@ -256,25 +278,38 @@ export default function ChatArea() {
   };
 
   const handleDeleteMessage = async (message: Message) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+    setMessageToDelete(message);
+    setShowDeleteMessageConfirm(true);
+  };
 
+  const confirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    
     try {
-      await deleteMessage(message.id);
+      await deleteMessage(messageToDelete.id);
 
       // Update message in UI
-      updateMessage(message.id, {
+      updateMessage(messageToDelete.id, {
         deleted: true,
-        content: message.type === "text" ? "This message was deleted" : "",
+        content: messageToDelete.type === "text" ? "This message was deleted" : "",
       });
 
       // If replying to this message, cancel reply
-      if (replyingTo?.id === message.id) {
+      if (replyingTo?.id === messageToDelete.id) {
         setReplyingTo(null);
       }
     } catch (error) {
       console.error("Error deleting message:", error);
       toast.error("Failed to delete message. Please try again.");
+    } finally {
+      setShowDeleteMessageConfirm(false);
+      setMessageToDelete(null);
     }
+  };
+
+  const cancelDeleteMessage = () => {
+    setShowDeleteMessageConfirm(false);
+    setMessageToDelete(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -337,6 +372,37 @@ export default function ChatArea() {
     }
   };
 
+  // Handle deleting all messages in the chat
+  const handleDeleteChat = async () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteChat = async () => {
+    try {
+      setIsSubmitting(true);
+      const success = await deleteAllChatMessages(selectedChatId);
+      
+      if (success) {
+        // This will trigger a refresh via the real-time listener,
+        // but we'll also clear locally just to be immediate
+        clearCurrentChatMessages();
+        toast.success("All messages have been permanently deleted");
+      } else {
+        toast.error("Failed to delete messages");
+      }
+    } catch (error) {
+      console.error("Error deleting chat messages:", error);
+      toast.error("An error occurred while deleting messages");
+    } finally {
+      setIsSubmitting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const cancelDeleteChat = () => {
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat header */}
@@ -361,7 +427,21 @@ export default function ChatArea() {
             <p className="font-medium dark:text-white">{otherParticipantInfo.name}</p>
           </div>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDeleteChat}
+            className="p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+            aria-label="Delete all messages"
+            disabled={isSubmitting}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Messages area with virtualization */}
@@ -383,28 +463,48 @@ export default function ChatArea() {
             )}
             
             <div className="space-y-3">
-              {currentChatMessages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isOwnMessage={message.senderId === user.id}
-                  senderInfo={
-                    message.senderId === user.id
-                      ? { name: user.name, image: user.image }
-                      : selectedChat.participantInfo[message.senderId] || {
-                          name: "Unknown User",
-                        }
-                  }
-                  selectedMessageId={selectedMessageId}
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchMove}
-                  onSetReplyingTo={setReplyingTo}
-                  onDelete={handleDeleteMessage}
-                  onImageClick={handleImageClick}
-                  chatParticipantInfo={selectedChat.participantInfo}
-                />
-              ))}
+              {currentChatMessages
+                .filter(message => message && message.id) // Filter out any invalid messages
+                .reduce((elements: React.ReactElement[], message, index, array) => {
+                // Add date separator if needed
+                if (index === 0 || 
+                    formatMessageDate(message.timestamp) !== 
+                    formatMessageDate(array[index - 1].timestamp)) {
+                  elements.push(
+                    <div key={`date-${message.id}`} className="flex justify-center my-4">
+                      <div className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full text-sm text-gray-600 dark:text-gray-300">
+                        {formatMessageDate(message.timestamp)}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Add the message bubble
+                elements.push(
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isOwnMessage={message.senderId === user.id}
+                    senderInfo={
+                      message.senderId === user.id
+                        ? { name: user.name, image: user.image }
+                        : selectedChat.participantInfo[message.senderId] || {
+                            name: "Unknown User",
+                          }
+                    }
+                    selectedMessageId={selectedMessageId}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onSetReplyingTo={setReplyingTo}
+                    onDelete={handleDeleteMessage}
+                    onImageClick={handleImageClick}
+                    chatParticipantInfo={selectedChat.participantInfo}
+                  />
+                );
+                
+                return elements;
+              }, [])}
               <div ref={messagesEndRef} style={{ height: 20 }} />
             </div>
           </>
@@ -419,6 +519,30 @@ export default function ChatArea() {
           onClose={handleCloseModal}
         />
       )}
+
+      {/* Confirm Delete All Messages Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Delete All Messages"
+        message="Are you sure you want to permanently delete all messages? This action cannot be undone and will remove all messages for both users."
+        confirmText="Delete All"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteChat}
+        onCancel={cancelDeleteChat}
+        isDestructive={true}
+      />
+
+      {/* Confirm Delete Single Message Modal */}
+      <ConfirmModal
+        isOpen={showDeleteMessageConfirm}
+        title="Delete Message"
+        message="Are you sure you want to delete this message?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteMessage}
+        onCancel={cancelDeleteMessage}
+        isDestructive={true}
+      />
 
       {/* Reply indicator */}
       {replyingTo && (

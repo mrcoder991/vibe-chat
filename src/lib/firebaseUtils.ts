@@ -743,4 +743,31 @@ export const updateChatParticipantInfo = async (
     console.error(`Error updating participant info in chat ${chatId}:`, error);
     return false;
   }
-}; 
+};
+
+export const deleteAllChatMessages = async (chatId: string): Promise<boolean> => {
+  try {
+    // Call the server-side API endpoint which has admin privileges
+    // to delete messages from both users
+    const response = await fetch('/api/delete-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chatId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API error deleting chat messages:", errorData);
+      return false;
+    }
+
+    const result = await response.json();
+    console.log(`Successfully deleted ${result.count} messages`);
+    return true;
+  } catch (error) {
+    console.error("Error deleting all chat messages:", error);
+    return false;
+  }
+};

@@ -58,6 +58,7 @@ interface AppState {
   updateMessagesReadStatus: (messageIds: string[]) => void;
   calculateUnreadCounts: (userId: string) => void;
   removeInvite: (inviteId: string) => void;
+  clearCurrentChatMessages: () => void;
   
   // Cleanup
   unsubscribeAll: () => void;
@@ -413,6 +414,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       pendingInvites: state.pendingInvites.filter((invite) => invite.id !== inviteId),
     }));
+  },
+  
+  clearCurrentChatMessages: () => {
+    set({ currentChatMessages: [] });
   },
   
   unsubscribeAll: () => {

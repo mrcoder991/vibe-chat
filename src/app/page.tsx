@@ -84,16 +84,37 @@ export default function Home() {
                     <div className="flex justify-start">
                       <div className="bg-gray-200 dark:bg-gray-600 rounded-lg p-3 max-w-xs dark:text-white">
                         <p className="text-sm">Hey! How are you doing today?</p>
+                        <p className="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">10:15</p>
                       </div>
                     </div>
+                    
+                    {/* Date Separator */}
+                    <div className="flex items-center justify-center my-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Yesterday</p>
+                    </div>
+                    
                     <div className="flex justify-end">
                       <div className="bg-blue-600 rounded-lg p-3 max-w-xs text-white">
                         <p className="text-sm">Hi Alex! I&apos;m doing great, thanks for asking.</p>
+                        <p className="text-xs text-right mt-1 text-blue-200">08:30</p>
                       </div>
                     </div>
                     <div className="flex justify-start">
                       <div className="bg-gray-200 dark:bg-gray-600 rounded-lg p-3 max-w-xs dark:text-white">
                         <p className="text-sm">Do you want to grab lunch tomorrow?</p>
+                        <p className="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">08:34</p>
+                      </div>
+                    </div>
+                    
+                    {/* Today Date Indicator */}
+                    <div className="flex items-center justify-center my-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Today</p>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <div className="bg-blue-600 rounded-lg p-3 max-w-xs text-white">
+                        <p className="text-sm">That sounds great! Where should we meet?</p>
+                        <p className="text-xs text-right mt-1 text-blue-200">09:15</p>
                       </div>
                     </div>
                   </div>
