@@ -4,13 +4,21 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, browserLocalPersistence } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  setPersistence, 
+  browserSessionPersistence, 
+  browserLocalPersistence,
+  fetchSignInMethodsForEmail
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { showAuthError, handleAccountLinkingError } from '@/lib/authUtils';
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 type LoginInputs = {
   email: string;
@@ -53,6 +61,20 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
+      // Check if this email is used with Google sign-in
+      const signInMethods = await fetchSignInMethodsForEmail(auth, data.email);
+
+      console.log("Sign in methods:", signInMethods);
+      
+      // If this email only uses Google sign-in, show a message and don't try email auth
+      if (signInMethods.includes('google.com') && !signInMethods.includes('password')) {
+        toast.error('This email is registered with Google. Please use the "Sign in with Google" button instead.', {
+          duration: 5000,
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Set the persistence based on rememberMe checkbox
       const persistenceType = data.rememberMe 
         ? browserLocalPersistence // Remember user between sessions
@@ -65,17 +87,9 @@ export default function LoginPage() {
       toast.success('Successfully logged in!');
       router.push('/chat');
       router.replace('/chat'); // Replace history so back button won't work
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        const { code } = error as { code?: string };
-        if (code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-          toast.error('Invalid email or password');
-        } else if (code === 'auth/too-many-requests') {
-          toast.error('Too many failed login attempts, please try again later');
-        } else {
-          toast.error('Failed to login. Please try again.');
-          console.error(error);
-        }
+    } catch (error) {
+      if (!handleAccountLinkingError(error)) {
+        showAuthError(error);
       }
     } finally {
       setIsLoading(false);
@@ -98,7 +112,25 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {/* Google Sign-In Button */}
+          <div className="space-y-6">
+            <GoogleAuthButton mode="login" disabled={isLoading} />
+          </div>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <form className="mt-6 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <Input
               label="Email Address"
               type="email"

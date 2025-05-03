@@ -4,13 +4,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { 
+  createUserWithEmailAndPassword, 
+  updateProfile, 
+  fetchSignInMethodsForEmail
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { showAuthError } from '@/lib/authUtils';
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 type SignupInputs = {
   name: string;
@@ -53,6 +59,14 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
+      // Check if email is already used with Google
+      const signInMethods = await fetchSignInMethodsForEmail(auth, data.email);
+      if (signInMethods.includes('google.com')) {
+        toast.error('This email is already associated with a Google account. Please sign in with Google.');
+        setIsLoading(false);
+        return;
+      }
+      
       console.log("Starting user creation with name:", data.name);
       
       // Create user with email and password
@@ -76,18 +90,8 @@ export default function SignupPage() {
       // Redirect immediately without delay
       router.push('/chat');
       router.replace('/chat'); // Replace history so back button won't work
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        const { code } = error as { code?: string };
-        if (code === 'auth/email-already-in-use') {
-          toast.error('Email already in use. Please use a different email or login.');
-        } else if (code === 'auth/weak-password') {
-          toast.error('Password is too weak. Please use a stronger password.');
-        } else {
-          toast.error('Failed to create account. Please try again.');
-          console.error(error);
-        }
-      }
+    } catch (error) {
+      showAuthError(error);
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +113,25 @@ export default function SignupPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {/* Google Sign-Up Button */}
+          <div className="space-y-6">
+            <GoogleAuthButton mode="signup" disabled={isLoading} />
+          </div>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <form className="mt-6 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <Input
               label="Full Name"
               type="text"
