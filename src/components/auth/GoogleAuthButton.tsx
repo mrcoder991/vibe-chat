@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   signInWithPopup, 
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import { showAuthError } from '@/lib/authUtils';
+import { FirebaseError } from 'firebase/app';
 
 interface GoogleAuthButtonProps {
   mode: 'login' | 'signup';
@@ -29,7 +30,8 @@ export default function GoogleAuthButton({
     setIsLoading(true);
     
     try {
-      // Force account selection even if user is already signed in
+      // Force account selection for this specific sign-in attempt
+      // (This is different from the default setup in firebase.ts)
       googleProvider.setCustomParameters({
         prompt: 'select_account'
       });
@@ -40,22 +42,32 @@ export default function GoogleAuthButton({
       // The signed-in user info
       const user = result.user;
       
-      // Check if this is a returning user
-      const isNewUser = result.additionalUserInfo?.isNewUser;
-      
-      // Get a list of all sign-in methods for the user's email
-      const signInMethods = await fetchSignInMethodsForEmail(auth, user.email || '');
-      
-      // If user previously signed in with email/password, show a message about the account link
-      if (signInMethods.includes('password') && signInMethods.includes('google.com')) {
-        toast.success(
-          'Your email and Google accounts have been linked. You can now sign in with either method.', 
-          { duration: 6000 }
-        );
-      }
-      else {
+      try {
+        // Get a list of all sign-in methods for the user's email
+        const signInMethods = await fetchSignInMethodsForEmail(auth, user.email || '');
+        console.log("Available sign-in methods after Google sign-in:", signInMethods);
+        
+        // If user previously signed in with email/password, show a message about the account link
+        if (signInMethods.includes('password') && signInMethods.includes('google.com')) {
+          toast.success(
+            'Your email and Google accounts have been linked. You can now sign in with either method.', 
+            { duration: 6000 }
+          );
+        }
+        else {
+          // Display appropriate message based on login/signup mode
+          if (mode === 'login') {
+            toast.success('Successfully logged in with Google!');
+          } else {
+            toast.success('Account created successfully!');
+          }
+        }
+      } catch (signInMethodsError) {
+        console.error("Error fetching sign-in methods:", signInMethodsError);
+        // Continue with the authentication process even if fetching sign-in methods fails
+        
         // Display appropriate message based on login/signup mode
-        if (mode === 'login' || !isNewUser) {
+        if (mode === 'login') {
           toast.success('Successfully logged in with Google!');
         } else {
           toast.success('Account created successfully!');
@@ -65,6 +77,36 @@ export default function GoogleAuthButton({
       router.push('/chat');
       router.replace('/chat');
     } catch (error) {
+      console.error("Google sign-in error:", error);
+      
+      // Log detailed information about the error
+      if (error instanceof FirebaseError) {
+        
+        // Special handling for invalid credential error
+        if (error.code === 'auth/invalid-credential') {
+          toast.error('Google authentication failed. This could be due to a network issue or a problem with your Google account. Please try again.', {
+            duration: 5000
+          });
+          return;
+        }
+        
+        // Handle popup closed
+        if (error.code === 'auth/popup-closed-by-user') {
+          toast.error('Sign-in was canceled. Please try again when you\'re ready.', {
+            duration: 3000
+          });
+          return;
+        }
+        
+        // Handle popup blocked
+        if (error.code === 'auth/popup-blocked') {
+          toast.error('Sign-in popup was blocked. Please allow popups for this site and try again.', {
+            duration: 5000
+          });
+          return;
+        }
+      }
+      
       showAuthError(error);
     } finally {
       setIsLoading(false);

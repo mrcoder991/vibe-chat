@@ -18,7 +18,16 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// Initialize Google provider
 const googleProvider = new GoogleAuthProvider();
+// Add scopes for better user info access
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
+// Force prompt each time to avoid login issues
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 // Set persistence to LOCAL - this keeps the user logged in even after browser refresh
 if (typeof window !== 'undefined') {
@@ -30,6 +39,20 @@ if (typeof window !== 'undefined') {
       onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('User is signed in with UID:', user.uid);
+          console.log('User email:', user.email);
+          console.log('Provider data:', user.providerData);
+          
+          // Show all auth providers for this user
+          user.providerData.forEach((profile, i) => {
+            console.log(`Auth provider ${i}:`, profile.providerId);
+          });
+          
+          // Check if specific providers are available
+          const hasEmailProvider = user.providerData.some(p => p.providerId === 'password');
+          const hasGoogleProvider = user.providerData.some(p => p.providerId === 'google.com');
+          
+          console.log('Has email provider:', hasEmailProvider);
+          console.log('Has Google provider:', hasGoogleProvider);
         } else {
           console.log('User is signed out');
         }

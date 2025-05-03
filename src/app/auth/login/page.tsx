@@ -17,8 +17,9 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { showAuthError, handleAccountLinkingError } from '@/lib/authUtils';
+import { showAuthError, } from '@/lib/authUtils';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
+import { FirebaseError } from 'firebase/app';
 
 type LoginInputs = {
   email: string;
@@ -60,13 +61,11 @@ export default function LoginPage() {
   const onSubmit: SubmitHandler<LoginInputs> = async (data) => {
     setIsLoading(true);
     
-    try {
-      // Check if this email is used with Google sign-in
+    try {      
+      // Check if this email is registered with any provider
       const signInMethods = await fetchSignInMethodsForEmail(auth, data.email);
 
-      console.log("Sign in methods:", signInMethods);
-      
-      // If this email only uses Google sign-in, show a message and don't try email auth
+      // If we know this email uses Google sign-in only, suggest the Google button
       if (signInMethods.includes('google.com') && !signInMethods.includes('password')) {
         toast.error('This email is registered with Google. Please use the "Sign in with Google" button instead.', {
           duration: 5000,
@@ -75,20 +74,30 @@ export default function LoginPage() {
         return;
       }
       
-      // Set the persistence based on rememberMe checkbox
+      // Set persistence based on rememberMe checkbox
       const persistenceType = data.rememberMe 
         ? browserLocalPersistence // Remember user between sessions
         : browserSessionPersistence; // Forget user when browser is closed
       
       await setPersistence(auth, persistenceType);
       
-      // Then sign in
+      // Attempt to sign in
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast.success('Successfully logged in!');
       router.push('/chat');
       router.replace('/chat'); // Replace history so back button won't work
     } catch (error) {
-      if (!handleAccountLinkingError(error)) {
+      console.error("Login error:", error);
+      
+      if (error instanceof FirebaseError && error.code === 'auth/invalid-credential') {
+        // Since Firebase only gives us generic "invalid-credential" for multiple cases,
+        // provide a more helpful message based on what we know
+        
+        toast.error('Login failed. Please verify your email and password. If you originally signed up with Google, please use the Google sign-in button instead.', {
+          duration: 10000,
+        });
+      } else {
+        // Handle other authentication errors
         showAuthError(error);
       }
     } finally {
